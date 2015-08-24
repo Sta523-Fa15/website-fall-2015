@@ -1,0 +1,349 @@
+---
+layout: page
+title: Using the Shell
+reading: ""
+notes: ""
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: true
+---
+```{r echo=FALSE}
+source("../util/bash_engine.R")
+
+opts_chunk$set(root = "../../Data/shell_ex")
+opts_chunk$set(reppat = "Desktop/Sta523/")
+```
+
+## Why the shell
+
+* Programmatically interact with OS (file system)
+* Origins in the 1960s and 1970s
+* "designed by computer scientists for computer scientists" 
+* Evolution - interactive command language to scripting programming language
+* "quick and dirty" prototyping
+
+## Unix Design Philosophy
+
+"Even though the UNIX system introduces a number of innovative programs and techniques, no single program or idea makes it work well. Instead, what makes it effective is the approach to programming, a philosophy of using the computer. Although that philosophy can't be written down in a single sentence, at its heart is the idea that the power of a system comes more from the relationships among programs than from the programs themselves. Many UNIX programs do quite trivial things in isolation, but, combined with other programs, become general and useful tools."
+
+
+The UNIX Programming Environment, Brian Kernighan and Rob Pike
+
+## (Popular) Flavors of the unix shell {.smaller}
+
+* Bourne shell `/bin/sh` - The oldest and most standardized shell. Widely used for system startup files (scripts run during system startup). Installed in Mac OS X.
+
+* Bash (Bourne Again SHell) `/bin/bash` - Bash is an improved version of sh. Combines features from `csh`, `sh`, and `ksh`. Very widely used, especially on Linux systems. Installed in Mac OS X. 
+
+* C shell `/bin/csh` - Provides scripting features that have a syntax similar to that of the C programming language (originally written by Bill Joy). Installed in Mac OS X.
+
+* Korn shell `/bin/ksh` - Developed at AT&T by David Korn in the early 1980s. Ksh is widely used for programming. It is now open-source software, although you must agree to AT&T's license to install it. http://www.kornshell.com
+
+* TC Shell `/bin/tcsh` - An improved version of csh. The t in tcsh comes from the TENEX and TOPS-20 operating systems, which provided a command-completion feature that the creator (Ken Greer) of tcsh included in his new shell. Wilfredo Sanchez, formerly lead engineer on Mac OS X for Apple, worked on tcsh in the early 1990s at the Massachusetts Institute of Technology.
+
+* Z shell `/bin/zsh` - Created in 1990, zsh combines features from tcsh, bash, and ksh, and adds many of its own. Installed in Mac OS X.
+
+
+## Where am I? (pwd, ls, cd)
+
+```{r engine="bash"}
+pwd
+```
+
+```{r engine="bash"}
+ls -l
+```
+
+```{r engine="bash"}
+cd bob
+pwd
+```
+
+## {.smaller}
+
+```{r engine="bash", root="../../Data/shell_ex/bob"}
+ls -la
+cd ..
+```
+
+```{r engine="bash", root="../../Data/shell_ex/bob"}
+cd .
+pwd
+```
+
+```{r engine="bash", root="../../Data/shell_ex/bob"}
+cd ..
+pwd
+```
+
+
+## Creating or Deleting directories (mkdir, rmdir)
+
+```{r engine="bash"}
+ls -l
+```
+
+```{r engine="bash"}
+mkdir test
+ls -l
+```
+
+##
+
+```{r engine="bash"}
+rmdir test
+ls -l
+```
+
+## Copying, moving and deleting (cp, mv, rm)
+
+```{r engine="bash"}
+cp haiku.txt awesome_haiku.txt
+ls -l
+```
+
+```{r engine="bash"}
+rm awesome_haiku.txt
+ls -l
+```
+
+##
+
+```{r engine="bash"}
+ls -l
+```
+
+```{r engine="bash"}
+mv haiku.txt better_haiku.txt
+ls -l
+```
+
+```{r engine="bash", echo=FALSE, results="hide"}
+mv better_haiku.txt haiku.txt 
+```
+
+## Wildcards and the shell
+
+* `*` -  matches any number of characters in a filename, including none.
+* `?` -  matches any single character.
+* `[ ]` - set of characters that may match a single character at that position.
+* `-` -   used within `[ ]` denotes a range of characters or numbers.
+
+## 
+
+```{r engine="bash"}
+ls bob/labs
+```
+
+##
+
+```{r engine="bash"}
+ls bob/labs/Lab*.txt
+```
+
+```{r engine="bash"}
+ls bob/labs/Lab?.txt
+```
+
+
+##
+
+```{r engine="bash"}
+ls -l bob/labs/*[AC].txt
+```
+
+```{r engine="bash"}
+ls -l bob/labs/*[A-C].txt
+```
+
+## Home directory and `~`
+
+`~` is a special character that expands to the name of your home directory. If you append another user's login name to the character, it refers to that user's home directory.
+
+```{r engine="bash"}
+cd ~
+pwd
+```
+
+```{r engine="bash"}
+cd ~guest
+pwd
+```
+
+## Examining files (cat, more, head, tail)
+
+```{r engine="bash"}
+cat bob/notes.txt
+```
+
+##
+
+```{r engine="bash"}
+head -n 7 bob/notes.txt
+```
+
+##
+
+```{r engine="bash"}
+tail -n 15 bob/notes.txt
+```
+
+## Pipes and Redirection
+
+```{r engine="bash"}
+cat bob/notes.txt | wc 
+```
+
+```{r engine="bash"}
+cat bob/notes.txt | grep [Ll]orem
+```
+
+##
+
+```{r engine="bash"}
+cd bob/labs/
+cat Lab1-PartA.txt >  Lab1_1.txt
+cat Lab1-PartB.txt >> Lab1_1.txt
+cat Lab1-PartC.txt >> Lab1_1.txt
+cat Lab1_1.txt
+```
+
+```{r engine="bash", root="../../Data/shell_ex/bob/labs/"}
+cat Lab1-PartA.txt Lab1-PartB.txt Lab1-PartC.txt > Lab1_2.txt
+cat Lab1_2.txt
+```
+
+##
+
+```{r engine="bash", root="../../Data/shell_ex/bob/labs/"}
+cat Lab1-Part[A-C].txt > Lab1_3.txt
+cat Lab1_3.txt
+```
+
+```{r engine="bash", root="../../Data/shell_ex/bob/labs/", echo=FALSE, results="hide"}
+rm Lab1_1.txt Lab1_2.txt Lab1_3.txt
+```
+
+## Oroborus cleverness
+
+Want to see the 50th line of the file and nothing else?
+
+```{r engine="bash"}
+head -n 50 bob/notes.txt | tail -n 1
+```
+
+What about the just the penultimate line?
+
+```{r engine="bash"}
+tail -n 2 bob/notes.txt | head -n 1
+```
+
+
+## Finding stuff (find)
+
+```{r engine="bash"}
+find . -name "*.txt"
+```
+
+
+```{r echo=FALSE}
+source("../util/bash_engine.R")
+
+opts_chunk$set(root = "../../Data/NASA_Web/")
+opts_chunk$set(reppat = "Desktop/Sta523/")
+```
+
+## NASA Web logs
+
+Lets download the data:
+
+```{r engine="bash", eval=FALSE}
+curl -O ftp://ita.ee.lbl.gov/traces/NASA_access_log_Jul95.gz
+curl -O ftp://ita.ee.lbl.gov/traces/NASA_access_log_Aug95.gz
+```
+
+these files are compressed so we need to ungzip them,
+
+```{r engine="bash", eval=FALSE}
+gunzip NASA_access_log_Jul95.gz
+gunzip NASA_access_log_Aug95.gz
+```
+
+We can also look at how many entries there are
+
+```{r engine="bash"}
+cat NASA_access_log_Jul95 | wc -l
+cat NASA_access_log_Aug95 | wc -l
+```
+
+
+## {.smaller}
+
+```{r engine="bash"}
+head NASA_access_log_Jul95
+```
+
+```{r engine="bash"}
+head NASA_access_log_Aug95
+```
+
+## Working with (delimited) textual data
+
+The first column contains the url / ip of who made the http request, lets see what we can do with the July logs.
+
+```{r engine="bash"}
+cut -d" " -f1 NASA_access_log_Jul95 | head
+```
+
+## {.smaller}
+
+```{r engine="bash"}
+cut -d" " -f1 NASA_access_log_Jul95 | sort | uniq | head
+```
+
+```{r engine="bash"}
+cut -d" " -f1 NASA_access_log_Jul95 | sort | uniq | wc
+```
+
+## {.smaller}
+
+```{r engine="bash"}
+cut -d" " -f1 NASA_access_log_Jul95 | sort | uniq -c | head -n 7
+```
+
+```{r engine="bash"}
+cut -d" " -f1 NASA_access_log_Jul95 | sort | uniq -c | sort -rn | head -n 7
+```
+
+
+## HTTP Status Codes
+
+* 1xx Informational
+* 2xx Success
+* 3xx Redirection
+* 4xx Client Error
+* 5xx Server Error
+
+Examples:
+
+* 200 OK - Standard response for successful HTTP requests.
+* 404 Not Found - The requested resource could not be found but may be available later.
+
+## Some Exercises
+
+Enough talking, now it is time for you to try some of this stuff. If you haven't yet download the data onto your computer and see if you can do the following (work with your neighbors):
+
+* Examine the status codes, which are the most common?
+* In looking at the status codes did you notice anything out of the ordinary?
+* What can you tell me about missing web pages (404s), is it always the same pages that are missing or is there no obvious pattern?
+* What was the most popular page during each of the two month logging periods?
+
+
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* Mark Hansen - [UCLA's Stat 202a](http://www.stat.ucla.edu/~cocteau/stat202a/index.html)
+* Karl Broman - [Wisc's Tools4RR](http://kbroman.org/Tools4RR/)
+* [Software Carpentry Project](http://software-carpentry.org/)

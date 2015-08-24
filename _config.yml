@@ -1,0 +1,23 @@
+markdown: kramdown
+
+permalink: none
+baseurl: /~cr173/Sta523_Fa15
+
+lang: en
+
+name: Sta 523 - Statistical Programming (Fall 2015)
+author: Colin Rundel
+email: rundel@gmail.com
+
+topbar:
+  - name: Schedule
+    url: /
+  - name: Software
+    url: /software/
+  - name: Info
+    url: /info/
+  - name: Syllabus
+    url: /syllabus.pdf
+  - name: Github
+    url: https://github.com/Sta523-Fa15
+    absolute: true

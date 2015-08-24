@@ -1,0 +1,11 @@
+---
+layout: page
+title: Using ssh and the shell
+reading: ""
+notes: ""
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: false
+link: false
+---

@@ -1,0 +1,8 @@
+---
+layout: page
+title: Web Scraping cont.
+reading: ""
+notes: "<a href='https://github.com/hadley/rvest'>rvest</a>, <a href='http://selectorgadget.com/'</a>SelectorGadget</a>"
+slides: false
+link: false
+---

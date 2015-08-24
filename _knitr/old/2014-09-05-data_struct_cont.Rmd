@@ -1,0 +1,8 @@
+---
+layout: page
+title: R data structures cont.
+reading: "<a href='https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=3&ved=0CDQQFjAC&url=http%3A%2F%2Fjournal.r-project.org%2Farchive%2F2010-2%2FRJournal_2010-2_Wickham.pdf&ei=x9gJVIucMcns8AGaroHADg&usg=AFQjCNEJ_wGyAYE1FoKnbHMmhKjAgKZwAw&sig2=-S0N7ZaZah7ERF0BzQzaTg&bvm=bv.74649129,d.b2U'>stringr</a>"
+notes: "<a href='hw/hw1.html'>Homework 1</a>, <br/><a href='extras/matching.html'>Matching Example</a>"
+link: false
+---
+

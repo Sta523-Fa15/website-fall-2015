@@ -1,0 +1,135 @@
+---
+layout: page
+title: Rcpp
+reading: "<a href='http://www.rcpp.org/'>Rcpp.org</a>"
+notes: ""
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+
+# Rcpp
+
+## Why C++
+
+One word - *performance*
+
+* Low level compiled language ( vs. R is interpreted)
+
+* Static type system ( vs. R is dynamic)
+
+* Rigorous language definition / standard  (vs. R is ad hoc)
+
+* Extensive ecosystem of code / libraries 
+
+* Standard Template Library (STL)
+
+
+
+## R and C++ - The old way {.smaller}
+
+```cpp
+SEXP convolve2(SEXP a, SEXP b) 
+{
+  SEXP ab;
+
+  PROTECT(a = AS_NUMERIC(a));
+  PROTECT(b = AS_NUMERIC(b));
+  int na = LENGTH(a);
+  int nb = LENGTH(b);
+  int nab = na + nb - 1;
+  PROTECT(ab = NEW_NUMERIC(nab));
+  
+  double *xa = NUMERIC_POINTER(a); 
+  double *xb = NUMERIC_POINTER(b);
+  double *xab = NUMERIC_POINTER(ab);
+  
+  for(int i = 0; i < nab; i++) 
+      xab[i] = 0.0;
+
+  for(int i = 0; i < na; i++)
+      for(int j = 0; j < nb; j++) 
+          xab[i + j] += xa[i] * xb[j];
+  
+  UNPROTECT(3);
+  return(ab);
+}
+```
+
+## R and C++ - The Rcpp way {.smaller}
+
+
+```cpp
+using namespace Rcpp;
+
+// [[Rcpp::export]]
+NumericVector convolveCpp(NumericVector a, NumericVector b) 
+{
+    int na = a.size(), nb = b.size();
+    int nab = na + nb - 1;
+    
+    NumericVector xab(nab);
+    for (int i = 0; i < na; i++)
+        for (int j = 0; j < nb; j++)
+            xab[i + j] += a[i] * b[j];
+    
+    return xab;
+}
+```
+
+## What does Rcpp do?
+
+Provides a much more elegant (less painful) interface between R and C++ replacing `.C` and `.Call`
+
+* Native C++ representations of all R objects (vectors, matrices, lists, S4, etc.)
+
+    * Straight forward access to object attributes
+
+    * Simple translation from and to R (`as` and `wrap`)
+
+* High level support for compiling / linking / wrapper creation
+
+    * `evalCpp`, `cppFunction`, `sourceCpp`
+
+* Rcpp Sugar brings some of R's functional tools into C++
+
+
+## Examples
+
+<br/>
+
+* Simple expressions
+
+<br/>
+
+* Simple function (Fibonacci)
+
+<br/>
+
+* Performance
+
+
+
+## Rcpp and Armadillo
+
+One of the reasons to use Rcpp is to have easier access to the C++ library ecosystem.
+
+<br/>
+
+One example that is relevant to our discussion from last time is RcppArmadillo, which provides access to the [Armadillo C++ library](http://arma.sourceforge.net/) for linear algebra (a more expressive / higher level / R-like way of using BLAS / LAPACK in C++).
+
+<br/>
+
+<div class="centered">
+![arma](imgs/arma.png)
+</div>
+
+
+## Example
+
+<br/>
+
+* `rmvnorm`

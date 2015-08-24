@@ -1,0 +1,11 @@
+---
+layout: page
+title: Using git and github
+reading: "<a href='https://www.atlassian.com/git/tutorials/comparing-workflows/centralized-workflow/'>Centralized git workflow</a>"
+notes: "<a href='https://try.github.io/'>Try github</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: false
+link: false
+---

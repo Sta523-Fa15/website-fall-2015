@@ -1,0 +1,504 @@
+---
+layout: page
+title: Spatial Data Types
+reading: ""
+notes: "<a href='https://github.com/johan/world.geo.json'>Country GeoJSON</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: true
+slides: true
+---
+
+# Background
+
+## Analysis of Spatial Data in R
+
+R has a rich package ecosystem for read/writing, manipulating, and analyzing spatial data.
+
+<br/>
+
+Some core packages:
+
+* `sp` - core classes for handling spatial data.
+
+* `rgdal` - R interface to `gdal` (Geospatial Data Abstraction Library) for reading and writing spatial data.
+
+* `maptools` - Additional tools for reading and writing spatial data.
+
+* `rgeos` - R interface to `geos` (Geometry Engine Open Source) library for querying and manipulating spatial data. Reading and writing WKT.
+
+* `raster` - classes and tools for handling spatial raster data.
+
+<br/>
+
+See more - [Spatial task view](http://cran.r-project.org/web/views/Spatial.html)
+
+# GeoJSON
+
+```{r, echo=FALSE, results='hide'}
+suppressMessages(library(rgdal, quietly=TRUE, warn.conflicts=FALSE))
+par(mar=c(4,4,1,1))
+```
+
+## Point
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "Point", 
+        "coordinates": [30, 10]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+points(coordinates(sp), pch=16)
+```
+
+
+## MultiPoint
+
+```{r, error=TRUE}
+s = '{
+        "type": "MultiPoint", 
+        "coordinates": [ [10, 40], [40, 30], [20, 20], [30, 10] ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+```
+
+## LineString
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "LineString", 
+        "coordinates": [ [30, 10], [10, 30], [40, 40] ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+r=rapply(coordinates(sp), points, pch=16)
+```
+
+
+## MultiLineString
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "MultiLineString", 
+        "coordinates": [ [[10, 10], [20, 20], [10, 40]], 
+                         [[40, 40], [30, 30], [40, 20], [30, 10]]
+                       ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+r=rapply(coordinates(sp), points, pch=16)
+```
+
+## Polygon
+
+```{r echo=FALSE, results='hide'}
+poly_coords = function(sp)
+{
+  do.call(rbind, 
+          lapply(sp@polygons, 
+                 function(p) 
+                    do.call(rbind, lapply(p@Polygons, 
+                                          function(P) 
+                                            coordinates(P)
+                                         )
+                    )
+          )
+  )
+}
+```
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "Polygon", 
+        "coordinates": [ [[30, 10], [40, 40], [20, 40], [10, 20], [30, 10]] ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+
+## Polygon with Hole
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "Polygon", 
+        "coordinates": [ [[35, 10], [45, 45], [15, 40], [10, 20], [35, 10]], 
+                         [[20, 30], [35, 35], [30, 20], [20, 30]]
+                       ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+
+## MultiPolygon
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "MultiPolygon", 
+        "coordinates": [ [ [[30, 20], [45, 40], [10, 40], [30, 20]] ], 
+                         [ [[15, 5], [40, 10], [10, 20], [5, 10], [15, 5]] ]
+                       ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+
+## MultiPolygon with Hole(s)
+
+```{r, fig.align='center', out.width='400px'}
+s = '{
+        "type": "MultiPolygon", 
+        "coordinates": [  [ [[40, 40], [20, 45], [45, 30], [40, 40]] ], 
+                          [ [[20, 35], [10, 30], [10, 10], [30, 5], [45, 20], [20, 35]], 
+                            [[30, 20], [20, 15], [20, 25], [30, 20]]
+                          ]
+                       ]
+     }'
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+
+## GeometryCollection
+
+```{r, error=TRUE}
+s = '{
+        "type": "GeometryCollection",
+        "geometries": [
+          { 
+            "type": "Point",
+            "coordinates": [30, 10]
+          },
+          { 
+            "type": "LineString",
+            "coordinates": [ [30, 10], [10, 30], [40, 40] ]
+          }
+        ]
+     }'
+
+sp = readOGR(s, "OGRGeoJSON", verbose = FALSE)
+```
+
+# Well Known Text
+
+```{r, echo=FALSE, results='hide'}
+suppressMessages(library(rgeos, quietly=TRUE))
+```
+
+## Point
+
+```{r, fig.align='center', out.width='400px'}
+s = 'POINT (30 10)'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+points(coordinates(sp), pch=16)
+```
+
+## MultiPoint
+
+```{r, fig.align='center', out.width='400px'}
+s = 'MULTIPOINT ((10 40), (40 30), (20 20), (30 10))'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+points(coordinates(sp), pch=16)
+```
+
+## LineString
+
+```{r, fig.align='center', out.width='400px'}
+s = 'LINESTRING (30 10, 10 30, 40 40)'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+r=rapply(coordinates(sp), points, pch=16)
+```
+
+## MultiLineString
+
+```{r, fig.align='center', out.width='400px'}
+s = 'MULTILINESTRING ((10 10, 20 20, 10 40), 
+                      (40 40, 30 30, 40 20, 30 10))'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+r=rapply(coordinates(sp), points, pch=16)
+```
+
+## Polygon
+
+```{r, fig.align='center', out.width='400px'}
+s = 'POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+## Polygon with Hole
+
+```{r, fig.align='center', out.width='400px'}
+s = 'POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),
+              (20 30, 35 35, 30 20, 20 30))'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+## MultiPolygon
+
+```{r, fig.align='center', out.width='400px'}
+s = 'MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)),
+                   ((15 5, 40 10, 10 20, 5 10, 15 5)))'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+## MultiPolygon with Hole(s)
+
+```{r, fig.align='center', out.width='400px'}
+s = 'MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)),
+                   ((20 35, 10 30, 10 10, 30 5, 45 20, 20 35),
+                    (30 20, 20 15, 20 25, 30 20)))'
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+
+## GeometryCollection
+
+```{r, fig.align='center', out.width='400px'}
+s = 'GEOMETRYCOLLECTION (POINT (4 8),
+                         LINESTRING (4 6,7 10),
+                         POLYGON ((6 6, 8 6, 8 8, 6 6)))'
+
+sp = readWKT(s)
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+```
+
+
+# sp
+
+## Point
+
+```{r, fig.align='center', out.width='400px'}
+sp = SpatialPoints(data.frame(x=30,y=10))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+points(coordinates(sp), pch=16)
+```
+
+## MultiPoint
+
+```{r, fig.align='center', out.width='400px'}
+sp = SpatialPoints(data.frame(x=c(10,40,20,30),y=c(40,30,20,10)))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+points(coordinates(sp), pch=16)
+```
+
+## LineString
+
+```{r, fig.align='center', out.width='400px'}
+l = Line(data.frame(x=c(30,10,40), y=c(10,30,40)))
+
+ls = Lines(list(l), ID=1)
+sp = SpatialLines(list(ls))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+r=rapply(coordinates(sp), points, pch=16)
+```
+
+## MultiLineString
+
+```{r, fig.align='center', out.width='400px'}
+l1 = Line(data.frame(x=c(10,20,10), y=c(10,20,40)))
+l2 = Line(data.frame(x=c(40,30,40,30), y=c(40,30,20,10)))
+
+ls = Lines(list(l1,l2), ID=1)
+sp = SpatialLines(list(ls))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE)
+r=rapply(coordinates(sp), points, pch=16)
+```
+
+## Polygon
+
+```{r, fig.align='center', out.width='400px'}
+p = Polygon(data.frame(x=c(30,40,20,10,30), y=c(10,40,40,20,10)))
+
+ps = Polygons(list(p), ID=1)
+sp = SpatialPolygons(list(ps))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+## Polygon with Hole
+
+```{r, fig.align='center', out.width='400px'}
+p = Polygon(data.frame(x=c(35,45,15,10,35), y=c(10,45,40,20,10)))
+h = Polygon(data.frame(x=c(20,35,30,20), y=c(30,35,20,30)), hole=TRUE)
+
+ps = Polygons(list(p,h), ID=1)
+sp = SpatialPolygons(list(ps))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+## MultiPolygon
+
+```{r, fig.align='center', out.width='400px'}
+p1 = Polygon(data.frame(x=c(30,45,10,30), y=c(20,40,40,20)))
+p2 = Polygon(data.frame(x=c(15,40,10,5,15), y=c(5,10,20,10,5)))
+
+ps = Polygons(list(p1,p2), ID=1)
+sp = SpatialPolygons(list(ps))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+## MultiPolygon with Hole(s)
+
+```{r, fig.align='center', out.width='400px'}
+p1 = Polygon(data.frame(x=c(40,20,45,40), y=c(40,45,30,40)))
+p2 = Polygon(data.frame(x=c(20,10,10,30,45,20), y=c(35,30,10,5,20,35)))
+h1 = Polygon(data.frame(x=c(30,20,20,30), y=c(20,15,25,20)), hole=TRUE)
+
+ps = Polygons(list(p1,p2,h1), ID=1)
+sp = SpatialPolygons(list(ps))
+
+par(mar=c(4,4,1,1))
+plot(sp, axes=TRUE, col="lightgrey")
+points(poly_coords(sp), pch=16)
+```
+
+# Exercise
+
+## Largest Island in a lake on an island in a lake on an island
+
+![Taal Island](imgs/Taal.jpg)
+
+## (Fake) Island in a lake on an island in a lake
+
+```{r, echo=FALSE}
+fix_coords = function(x,n=2)
+{
+  for(i in 1:length(x@polygons))
+  {
+    for(j in 1:length(x@polygons[[i]]@Polygons))
+    {
+      x@polygons[[i]]@Polygons[[j]]@coords = round(x@polygons[[i]]@Polygons[[j]]@coords,n)
+    }
+  }
+
+  return(x)
+}
+
+get_coords = function(x)
+{
+  x = fix_coords(x,3)
+  x@polygons[[1]]@Polygons[[1]]@coords
+}
+
+set.seed(123)
+
+bound   = data.frame(x=c(0,0,1000,1000,0)/100,y=c(0,1000,1000,0,0)/100) 
+lake1   = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,100)/100,rnorm(1000,500,100)/100))) )
+island1 = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,50)/100, rnorm(1000,500,50)/100))) )
+lake2   = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,25)/100, rnorm(1000,500,25)/100))) )
+island2 = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,10)/100, rnorm(1000,500,10)/100))) )
+
+makeWKT = function(x)
+{
+  paste0("(", paste0(apply(x, 1, paste, collapse=" "), collapse=", "), ")")
+}
+
+s = paste0("MULTIPOLYGON ( \n", 
+           paste0("(", makeWKT(bound), ", ", makeWKT(lake1), "),\n"),
+           paste0("(", makeWKT(island1), ", ", makeWKT(lake2), "),\n"),
+           paste0("(", makeWKT(island2), ")"),
+           " )")
+```
+
+```{r, out.width="500px", out.height="500px", fig.width=7, fig.height=7, fig.align="center"}
+plot(readWKT(s),bg="blue",col="forestgreen", xlim=c(1.50,8.50), ylim=c(1.50,8.50), asp=1)
+```
+
+
+## Exercise
+
+Translate the following WKT into GeoJSON and a `SpatialPolygons` object.  
+
+```
+MULTIPOLYGON( ( (0 0, 0 10, 10 10, 10 0, 0 0), 
+                (4.307 1.952, 2.19 2.855, 2.339 5.51, 
+                 3.058 6.973, 3.382 7.424, 3.786 7.816, 
+                 4.348 8.184, 5.661 8.39, 7.575 7.448, 
+                 8.241 4.885, 7.692 3.755, 7.43 3.454, 
+                 6.843 3.035, 5.562 2.371, 4.307 1.952)
+              ),
+              ( (4.38 3.435, 4.143 3.661, 3.835 4.296, 
+                 3.746 4.543, 3.576 5.077, 3.684 5.632, 
+                 3.955 5.94, 4.71 6.27, 5.162 6.447, 
+                 6.368 5.771, 6.711 5.024, 6.511 4.179, 
+                 5.641 3.757, 5.252 3.58, 4.38 3.435), 
+                (4.642 4.184, 4.443 4.456, 4.289 4.73, 
+                 4.216 5.086, 4.643 5.929, 5.391 5.771, 
+                 5.809 5.027, 5.861 4.917, 5.748 4.722, 
+                 5.3 4.203, 4.642 4.184)
+              ),
+              ( (4.829 4.615, 4.671 4.952, 4.659 5.065, 
+                 4.846 5.285, 4.941 5.286, 4.963 5.282, 
+                 5.084 5.263, 5.198 5.216, 5.328 4.993, 
+                 5.208 4.798, 5.156 4.731, 4.829 4.615)
+              ) 
+            )
+```

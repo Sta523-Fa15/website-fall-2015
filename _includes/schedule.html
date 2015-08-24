@@ -1,0 +1,31 @@
+<table class="table table-striped">
+<thead>
+<tr>
+    <th width="10px" align="left"></th>
+    <th width="250px" align="left">Date</th>
+    <th width="500px" align="left">Topic</th>
+    <th width="400px" align="left">Reading</th>
+    <th width="350px" align="left">Notes</th>
+</tr>
+</thead> 
+
+{% for post in site.posts reversed %}
+<tr>
+    <td></td>
+    <td> {{ post.date | date: '%a, %b %e' }} </td>
+    <td>
+    {% if post.link == false %}
+        {{ post.title }}
+    {% else %}
+         <a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a> 
+        {% if post.slides %}
+            [<a href="{{ post.path | replace: '_posts', 'slides' }}">Slides</a>]
+        {% endif %}
+    {% endif %}
+    </td>
+    <td> {{ post.reading }} </td> 
+    <td> {{ post.notes }} </td> 
+</tr>
+{% endfor %}
+
+</table>

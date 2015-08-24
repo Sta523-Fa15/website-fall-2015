@@ -1,0 +1,366 @@
+---
+layout: page
+title: Vectorization and Joins
+reading: ""
+notes: "<a href='extras/hw3_merge_ex.R'>hw3_merge_ex.R</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+```{r, echo=FALSE}
+options(width = 110)
+```
+
+
+# Vectorization
+
+## Sampling Example {.smaller}
+
+Lets consider a function to generate samples from a bivariate normal.
+
+<br/>
+
+We want to sample `x` and `y` such that 
+
+$$
+\left(
+\begin{array}{c}
+x\\y
+\end{array}
+\right) \sim N
+\left(
+\left(
+\begin{array}{c}
+\mu_x\\\mu_y
+\end{array}
+\right)
+,
+\left(
+\begin{array}{cc}
+\sigma_x^2 & \rho \sigma_x\sigma_y\\
+\rho \sigma_x\sigma_y & \sigma_y^2
+\end{array}
+\right)
+\right)
+$$
+
+<br/>
+we can accomplish this by sampling `x` and `y` separately from
+
+<br/>
+
+$$
+\begin{aligned}
+x &\;\sim N(\mu_x, \sigma_x^2) \\
+y\,|\,x &\;\sim N\left(\mu_y + \frac{\sigma_y}{\sigma_x}\rho(x-\mu_x), (1-\rho^2)\sigma_y^2\right)
+\end{aligned}
+$$
+
+respectively.
+
+## Nonvectorized rbinorm
+
+```{r}
+rbinorm = function(n, mu=c(0,0), sigma=c(1,1), rho=0)
+{
+  res = matrix(NA, ncol=2, nrow=n)
+  colnames(res) = c("x","y")
+  for(i in 1:n)
+  {
+    x = rnorm(1, mu[1], sigma[1])
+    y = rnorm(1, mu[2] + (sigma[2]/sigma[1]) * rho * (x - mu[1]), sqrt(1-rho^2) * sigma[2])
+    
+    res[i,] = c(x,y)
+  }
+
+  return(res)
+}
+```
+
+## Vectorized rbinorm
+
+```{r}
+rbinorm_vec = function(n, mu=c(0,0), sigma=c(1,1), rho=0)
+{
+  x = rnorm(n, mu[1], sigma[1])
+  y = rnorm(n, mu[2] + (sigma[2]/sigma[1]) * rho * (x - mu[1]), sqrt(1-rho^2) * sigma[2])
+    
+  return(cbind(x,y))
+}
+```
+
+## Output {.smaller}
+
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2), mar=c(4,4,1,1))
+plot(rbinorm(1e5,rho=0.7),pch=16,cex=0.2,col=adjustcolor("black",alpha=0.1))
+plot(rbinorm_vec(1e5,rho=0.7),pch=16,cex=0.2,col=adjustcolor("black",alpha=0.1))
+```
+
+## Microbenchmark
+
+```{r}
+library(microbenchmark)
+print(microbenchmark(rbinorm(1e5,rho=0.7),rbinorm_vec(1e5,rho=0.7), times=10))
+```
+
+## Distance Vectorization {.smaller}
+
+```{r}
+gcd = function(loc1, loc2)
+{
+  deg2rad = function(deg) return(deg*pi/180)
+
+  y1 = deg2rad( loc1[2] )
+  y2 = deg2rad( loc2[2] )
+  x1 = deg2rad( loc1[1] )
+  x2 = deg2rad( loc2[1] )
+
+  R = 6371 # Earth mean radius in km
+  
+  d = sin(y1)*sin(y2) + cos(y1)*cos(y2) * cos(x2-x1)
+  if(d > 1 | d < -1) d = 0
+  else d = acos(d) * R
+  
+  return(d) # distance in km
+}
+```
+
+## GCD - Non-vectorized {.smaller}
+
+```{r}
+gcds = function(l1, l2=l1)
+{
+  d = matrix(NA, nrow=nrow(l1), ncol=nrow(l2))
+  
+  for(i in 1:nrow(l1))
+  {
+    for(j in 1:nrow(l2))
+    {
+      d[i,j] = gcd(l1[i,],l2[j,])
+    }
+  }
+
+  return(d)
+}
+```
+
+## GCD - Vectorized {.smaller}
+
+```{r}
+gcd_vec = function(loc1, loc2)
+{
+  loc1 = matrix(loc1*pi/180,ncol=2)
+  loc2 = matrix(loc2*pi/180,ncol=2)
+
+  R = 6371 # Earth mean radius in km
+
+  d = sin(loc1[,2])*sin(loc2[,2]) + cos(loc1[,2])*cos(loc2[,2]) * cos(loc2[,1]-loc1[,1])  
+  s = d > 1 | d < -1
+  d[s] = 0
+  d[!s] = acos(d[!s]) * R
+  
+  return(d) # distance in km
+}
+
+gcds_vec = function(l1, l2=l1)
+{
+  return( apply(l2, 1, function(x) gcd_vec(l1,x)) )
+}
+
+```
+
+## Performance
+
+
+```{r}
+n = 200
+locs = cbind(x = runif(n,-180,180), y = runif(n,-90,90))
+
+microbenchmark(gcds(locs),
+               gcds_vec(locs),
+               times=10)
+
+sum(abs(gcds(locs)-gcds_vec(locs)))
+```
+
+# Joins
+
+## Data
+
+<div class="columns-2">
+|  Name |       Email       |
+|-------|-------------------|
+| Alice | alice@company.com |
+| Bob   | bob@company.com   |
+| Carol | carol@company.com |
+| Dave  | dave@company.com  |
+| Eve   | eve@company.com   |
+
+
+|  Name |  Phone       |
+|-------|--------------|
+| Bob   | 919 555-1111 |
+| Carol | 919 555-2222 |
+| Eve   | 919 555-3333 |
+| Eve   | 310 555-3333 |
+| Frank | 919 555-4444 |
+
+</div>
+
+## Outer Join {.smaller}
+
+Outer join of email with phone by name
+
+|  name |           email   |    phone     |
+|-------|-------------------|--------------|
+| Alice | alice@company.com | NULL         |
+|   Bob |   bob@company.com | 919 555-1111 |
+| Carol | carol@company.com | 919 555-2222 |
+|  Dave |  dave@company.com | NULL         |
+|   Eve |   eve@company.com | 919 555-3333 |
+|   Eve |   eve@company.com | 310 555-3333 |
+| Frank |              NULL | 919 555-4444 |
+
+## Inner Join
+
+Inner join of email with phone by name
+
+|  Name |            Email  |     Phone    |
+|-------|-------------------|--------------|
+|   Bob |   bob@company.com | 919 555-1111 |
+| Carol | carol@company.com | 919 555-2222 |
+|   Eve |   eve@company.com | 919 555-3333 |
+|   Eve |   eve@company.com | 310 555-3333 |
+
+## Left Join
+
+Left join of email with phone by name
+
+|  name |           email   |    phone     |
+|-------|-------------------|--------------|
+| Alice | alice@company.com | NULL         |
+|   Bob |   bob@company.com | 919 555-1111 |
+| Carol | carol@company.com | 919 555-2222 |
+|  Dave |  dave@company.com | NULL         |
+|   Eve |   eve@company.com | 919 555-3333 |
+|   Eve |   eve@company.com | 310 555-3333 |
+
+## Right Join
+
+Right join of email with phone by name
+
+|  name |           email   |    phone     |
+|-------|-------------------|--------------|
+|   Bob |   bob@company.com | 919 555-1111 |
+| Carol | carol@company.com | 919 555-2222 |
+|   Eve |   eve@company.com | 919 555-3333 |
+|   Eve |   eve@company.com | 310 555-3333 |
+| Frank |              NULL | 919 555-4444 |
+
+
+
+## Data - R
+
+```{r echo=FALSE}
+library(dplyr)
+addr = data.frame(name = c("Alice","Bob","Carol","Dave","Eve"),
+                  email= c("alice@company.com", "bob@company.com", "carol@company.com", 
+                           "dave@company.com", "eve@company.com"))
+
+phone = data.frame(name = c("Bob","Carol","Eve","Eve","Frank"),
+                   phone= c("919 555-1111", "919 555-2222", "919 555-3333", 
+                            "310 555-3333", "919 555-4444"))
+```
+
+
+<div class="columns-2">
+```{r}
+addr
+```
+
+```{r}
+phone
+```
+</div>
+
+## Outer Join - R
+
+<div class="columns-2">
+Base R:
+```{r}
+merge(addr, phone, all=TRUE)
+```
+
+dplyr:
+
+Not implemented, due in 0.3.1.
+<br/><br/><br/><br/><br/><br/><br/><br/>
+</div>
+
+## Inner Join - R
+
+<div class="columns-2">
+Base R:
+```{r}
+merge(addr, phone, all=FALSE)
+```
+<br/>
+
+dplyr:
+```{r}
+inner_join(addr,phone)
+```
+</div>
+
+## Left Join - R
+
+<div class="columns-2">
+Base R:
+```{r}
+merge(addr, phone, all.x=TRUE)
+```
+<br/>
+
+dplyr:
+```{r}
+left_join(addr,phone)
+```
+</div>
+
+## Right Join - R
+
+<div class="columns-2">
+Base R:
+```{r}
+merge(addr, phone, all.y=TRUE)
+```
+
+dplyr:
+
+Not implemented, due in 0.3.1.
+<br/><br/><br/><br/><br/><br/><br/><br/>
+</div>
+
+## Semi and Anti Joins - R
+
+<div class="columns-2">
+```{r}
+semi_join(addr, phone)
+anti_join(addr, phone)
+```
+</div>
+
+
+
+# Acknowledgments
+
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* [UseR 2014 - dplyr Tutorial](https://www.dropbox.com/sh/i8qnluwmuieicxc/AAAgt9tIKoIm7WZKIyK25lh6a)
+* [dplyr - Introduction Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html)

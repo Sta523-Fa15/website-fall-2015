@@ -1,0 +1,352 @@
+---
+layout: page
+title: dplyr and SQL
+reading: "<a href='http://cran.r-project.org/web/packages/dplyr/vignettes/databases.html'>dplyr database vignette</a>"
+notes: "<a href='http://www.sqlite.org/queryplanner.html'>How Indexes Work</a>, <br/> <a href='http://tech.pro/tutorial/1555/10-easy-steps-to-a-complete-understanding-of-sql'>SQL Intro</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+```{r, echo=FALSE}
+options(width = 110)
+```
+
+
+# The why of databases
+
+## Numbers everyone should know
+
+| Task                                | Timing            |
+|-------------------------------------|-------------------|
+| L1 cache reference                  | 0.5 ns            |
+| L2 cache reference                  | 7 ns              |
+| Main memory reference               | 100 ns            |
+| Read 1 MB sequentially from memory  | 250,000 ns        |
+| Disk seek                           | 10,000,000 ns     |
+| Read 1 MB sequentially from network | 10,000,000 ns     |
+| Read 1 MB sequentially from disk    | 30,000,000 ns     |
+
+<div style="font-size: 10pt">
+From: http://surana.wordpress.com/2009/01/01/numbers-everyone-should-know/
+</div>
+
+
+## Implications for bigish data
+
+Lets imagine we have a *10 GB* flat data file and that we want to select certain rows based on a given criteria. This requires a sequential read across the entire data set.
+
+
+If we can store the file in memory:
+
+* $10~GB \times (250~\mu s / 1~MB) = 0.25$ seconds
+
+If we have to access the file from disk:
+
+* $10~GB \times (30~ms / 1~MB) = 30$ seconds
+
+<br/>
+
+This is just for *reading* data, if we make any modifications (*writing*) things are much worse. 
+
+
+## Implications for big data
+
+What about a *100 GB* flat data file?
+
+If we can store the file in memory:
+
+* $100~GB \times (250~\mu s / 1~MB) = 2.5$ seconds
+
+If we have to access the file from disk:
+
+* $100~GB \times (30~ms / 1~MB) = 300$ seconds
+
+<br/>
+
+This is actually incredibly optimistic since it assumes that all the data on disk can be read in one continuous read.
+
+
+## Blocks
+
+<div class="centered">
+Cost: Disk << Memory
+
+Speed: Disk <<< Memory
+</div>
+
+<br/>
+
+So usually possible to grow our disk storage to accommodate our data. However, memory is usually the limiting resource, and if we can't fit everything into memory?
+
+<br/>
+
+Create *blocks* - group rows based on similar attributes and read in multiple rows at a time. Optimal size will depend on the task and the properties of the disk.
+
+
+
+## Linear vs Binary Search
+
+Even with blocks, any kind of subsetting of rows requires a linear search, which requires $\mathcal{O}(N)$ accesses where $N$ is the number of blocks.
+
+<br/>
+
+We can do much better if we properly structure our data, specifically sorting some or all of the columns. 
+
+* Sorting is expensive, $\mathcal{O}(N \log N)$, but it only needs to be done once. 
+
+* After sorting, we can use a binary search for any subsetting tasks which is much faster, $\mathcal{O}(\log N)$.
+
+* These sorted columns are known as *indexes*.
+
+* Indexes require additional storage, but usually small enough to be kept in memory while blocks stay on disk.
+
+
+## Binary Search Example {.smaller}
+
+| Age  | Name         |
+|------|--------------|
+| 19   | Carol        |
+| 20   | Greg         |
+| 21   | Alice        |
+| 21   | Dave         |
+| 22   | Eve          |
+| 23   | Bob          |
+| 23   | Frank        |
+
+<br/><br/>
+
+Lets search for records for people who are 22 or older.
+
+
+## and then?
+
+This is just barely scratching the surface,
+
+* Efficiency gains are not just for disk, access is access
+
+* In general, trade off between storage and efficiency
+
+* Reality is a lot more complicated for everything mentioned so far, lots of very smart people have spent a lot of time thinking about and implementing tools
+
+* Different tasks with different requirements require different implementations and have different criteria for optimization
+
+
+
+## SQL
+
+Structures Query Language is a special purpose language for interacting with (querying and modifying) these indexed tabular data structures. 
+
+* ANSI Standard but with some dialect divergence
+
+* This functionality maps very closely (but not exactly) with the data manipulation verbs present in dplyr.
+
+* We will see this mapping in more detail in a bit.
+
+
+# Back to dplyr
+
+## dplyr & sqlite
+
+```{r, echo=FALSE}
+x=suppressWarnings(file.remove("~/db/park_db.sqlite3"))
+```
+
+```{r}
+library(dplyr)
+library(lubridate)
+library(stringr)
+
+park = read.csv("/home/vis/cr173/Sta523/data/parking/NYParkingViolations_small.csv",
+                stringsAsFactors=FALSE) %>% 
+       as.data.frame() %>%
+       tbl_df()
+
+dir.create("~/db",showWarnings = FALSE)
+db = src_sqlite("~/db/park_db.sqlite3", create = TRUE)
+dir("~/db/")
+
+```
+
+## {.smaller}
+
+```{r}
+park_sqlite = copy_to(db, park, temporary = FALSE)
+park_sqlite
+```
+
+## Limitations {.smaller}
+
+```{r, error=TRUE}
+(addr = select(park_sqlite, Violation.Precinct, House.Number, Street.Name) %>%
+        filter(Violation.Precinct <= 34) %>%
+        mutate(House.Number = str_trim(House.Number), Street.Name = str_trim(Street.Name)) %>%
+        filter(House.Number != "" & Street.Name != "") %>%
+        filter(str_detect(House.Number,"[0-9]+")) %>%
+        transmute(Violation.Precinct = Violation.Precinct, addr = paste(House.Number, Street.Name)) %>%
+        mutate(addr = tolower(addr)))
+```
+
+## {.smaller}
+
+```{r, error=TRUE}
+(addr = select(park_sqlite, Violation.Precinct, House.Number, Street.Name) %>%
+        filter(Violation.Precinct <= 34) %>%
+        mutate(House.Number = trim(House.Number), Street.Name = trim(Street.Name)) %>%
+        filter(House.Number != "" & Street.Name != "") 
+)
+```
+
+
+## {.smaller}
+
+```{r, error=TRUE}
+(addr = select(park_sqlite, Violation.Precinct, House.Number, Street.Name) %>%
+        filter(Violation.Precinct <= 34) %>%
+        filter(trim(House.Number) != "" & trim(House.Number) != "") 
+)
+```
+
+
+## SQL Query {.smaller}
+
+```{r}
+addr$query
+```
+
+## SQL Translation {.smaller}
+
+dplyr has a function, `translate_sql`, that lets you experiment with how R functions are translated to SQL
+
+<div class="columns-2">
+```{r, error=TRUE}
+translate_sql(x == 1 & (y < 2 | z > 3))
+translate_sql(x ^ 2 < 10)
+translate_sql(x %% 2 == 10)
+translate_sql(paste(x,y))
+translate_sql(mean(x))
+translate_sql(mean(x, na.rm=TRUE))
+```
+</div>
+
+<br/>
+
+In general, dplyr knows how to translate basic math, logical, and summary functions from R to SQL.
+
+
+## (Unfair) Timings {.smaller}
+
+```{r}
+system.time(
+  select(park, Violation.Precinct, House.Number, Street.Name) %>%
+  filter(Violation.Precinct <= 34) %>%
+  filter(str_trim(House.Number) != "" & str_trim(House.Number) != "") 
+)
+
+system.time(
+  select(park_sqlite, Violation.Precinct, House.Number, Street.Name) %>%
+  filter(Violation.Precinct <= 34) %>%
+  filter(trim(House.Number) != "" & trim(House.Number) != "") 
+)
+```
+
+`park_sqlite` was 3.4x times faster than `park`, but the latter is disk based while the former is wholly in memory, why this discrepancy?
+
+
+## Laziness
+
+`dplyr` uses lazy evaluation as much as possible, particularly when working with SQL backends.
+
+* When building a query, we don't want the entire table, often we just enough to check if our query is working.
+
+* Since we would prefer to run one complex query over many simple queries, laziness allows for verbs to be strung together.
+
+* Therefore, by default `dplyr`
+    
+    * won't connect and query the database until absolutely necessary (e.g. show output),
+
+    * unless explicitly told to, only query a handful of rows
+
+
+## Full query {.smaller}
+
+To force a full query, a return a complete `tbl_df` object `dplyr` uses the `collect` function.
+
+```{r}
+collect(addr)
+```
+
+`compute` and `collapse` also force a full query but have slightly different behavior and return types. 
+
+## Creating Indexes {.smaller}
+
+First some data loading and cleaning
+
+```{r, eval=FALSE}
+library(data.table)
+library(bit64)
+
+park_full = fread("/home/vis/cr173/Sta523/data/parking/NYParkingViolations.csv") %>% 
+            data.frame() %>%
+            tbl_df() %>%
+            select(Plate.ID:Violation.Code, Violation.Precinct, House.Number:Intersecting.Street) %>%
+            mutate(Issue.Date = mdy(Issue.Date)) %>%
+            mutate(Year = year(Issue.Date), Month = month(Issue.Date), Day = day(Issue.Date)) %>%
+            select(-Issue.Date)
+
+full = src_sqlite("~/db/park_full_db.sqlite3", create = TRUE) %>%
+       copy_to(park_full, temporary = FALSE)
+
+full_index = src_sqlite("~/db/park_full_indexed_db.sqlite3", create = TRUE) %>%
+             copy_to(park_full, temporary = FALSE,
+                     index = list(c("Year", "Month", "Day"), "Violation.Precinct", "Violation.Code"))
+```
+
+```{r, echo=FALSE}
+full = src_sqlite("~/db/park_full_db.sqlite3") %>% tbl("park_full")
+full_index = src_sqlite("~/db/park_full_indexed_db.sqlite3") %>% tbl("park_full")
+```
+
+
+##
+
+The indexed database takes up more disk space:
+
+```
+cr173@saxon [Sta523_Fa14]$ ls -lh ~/db
+total 740M
+-rw-r--r--+ 1 cr173 visitor    0 Oct 19 22:24 park_db.sqlite3
+-rw-r--r--+ 1 cr173 visitor 483M Oct 20 11:59 park_full_db.sqlite3
+-rw-r--r--+ 1 cr173 visitor 792M Oct 20 12:04 park_full_indexed_db.sqlite3
+```
+
+## Timings for filtering bad dates
+
+```{r}
+system.time(full %>% filter( !(Year %in% 2013:2014) ) %>% collect)
+system.time(full_index %>% filter( !(Year %in% 2013:2014) ) %>% collect)
+```
+
+## Timings for grouping
+
+```{r}
+system.time(full %>% filter( Year %in% 2013:2014 ) %>% 
+            group_by(Year, Month, Violation.Precinct) %>% summarize(count = n()) %>%  
+            collect)
+
+system.time(full_index %>% filter( Year %in% 2013:2014 ) %>% 
+            group_by(Year, Month, Violation.Precinct) %>% summarize(count = n()) %>%  
+            collect)
+```
+
+
+# Acknowledgments
+
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* [dplyr - Introduction Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html)
+* [dplyr - Databases Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/databases.html)

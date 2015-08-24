@@ -1,0 +1,58 @@
+---
+layout: page
+title: Homework 1 - World Cup Goals
+---
+
+<br/>
+<div style="text-align:center">
+![goals](imgs/goals.png)
+</div>
+<br/>
+
+## Background
+
+The 2014 FIFA World Cup took place this summer in Brazil, during the course of the tournament 171 goals were scored (not including penalty shootouts). The goal of this assignment is to work with semistructured data obtained from the web to construct a usable dataset within R that you will then visualize.  
+
+<br/>
+
+## Task 1 - Parse
+
+The data we will use for this assignment is available at available on saxon (`~cr173/Sta523/data/world_cup_goals_raw.txt`), this is an extract that has been taken from website of [Emil Johansson](http://ejoh.se/) who has constructed a number of World Cup 2014 [visualizations](http://ejoh.se/worldcup2014/goals/). The data we are interested in is contained in a series of html `div` tags, all other html markup has been stripped from the file.
+
+As such, the data is well structured but not in a way that can be easily read into R. Your task is to write the code necessary to read the contents of this file and to parse it and construct a well formed data frame of this data in R. The  data contains both regular goals as well as penalty shootout goals, and your data frame should include one row for each goal with details on the player, team, time, shot location, where the ball entered the goal, etc. The final data frame does not need to contain every value from the original but anything excluded should be justified.
+
+Your code should include a short write up describing your approach for parsing the data and any justifications you have for including or excluding certain data. Finally, be sure that the type of each column is reasonable for the contained data (double, integer, factor, etc). Breaking the write up and code into smaller pieces is preferable to a single monolithic block of text. Any time you find yourself writing "and then we" over and over again is a strong candidate to be broken up.
+
+Note that your parsing of the data file must be wholly reproducible, I should be able to start with the the raw data file and your code and produce the final data frame without any additional intervention. This means that you should not edit the data file by hand in any way.
+
+There are any number of ways to approach this task, there is no one right solution - be as creative as possible. If you want to supplement this data with outside sources, you are more than welcome to, just be sure to document where the data comes from and why it is included.
+
+<br/>
+
+## Task 2 - Visualize
+
+This task is very open ended, create some kind of compelling visualization of this data in R. There is no limit on what tools or packages you may use, the only requirement is that code and results must be entirely self contained in your R markdown file. For example there are many different ways to plot in R (e.g. base graphics, ggplot, lattice) and there are many additional packages that are focused for specific types of data and visualization tasks. See [here](http://www.statmethods.net/graphs/index.html) and [here](http://www.statmethods.net/advstats/index.html) for a brief introduction to some of R's visualization capabilities.
+
+You do not need to use all of the data, you are welcome to focus on a single player or single team, or any combination there of. A single high quality visualization will receive a much higher grade than a large number of poor quality visualizations. 
+
+The visualization you produce should include another brief write up giving the context of your visualization and why you believe it is compelling.
+
+<br/>
+
+## Task 3 - Translate
+
+As mentioned in class, JSON is a very popular data format. Your goal is to translate your data frame into valid (and hopefully well formatted JSON). JSON is not necessarily well suited to tabular data so as part of this task you need to think about how best to represent this data in the JSON format - this should in someway address the ways in which other people who are interested in this data are likely to use it. This JSON output should contain all of the data in the data frame.
+
+As with the other tasks there is not any single correct approach or solution here, you goal should be to come up with a reasonable structure along with a justification for the choices you have made. As with the previous two tasks, a small write up with these details should accompany your code.
+
+<br/>
+
+## Submission and Grading
+
+This homework is due by midnight Sunday, September 21st. You are to complete the assignment as a group and to keep everything (code, write ups, etc.) on your team's github repository (commit early and often). All team members are expected to contribute equally to the completion of this assignment and group assessments will be given at its completion - anyone judged to not have sufficient contributed to the final product will have their grade penalized. While different teams members may have different coding backgrounds and abilities, it is the responsibility of every team member to understand how and why all code in the assignment works.
+
+The final product for this assignment should be a single Rmd or Rnw document that contains all code and text for all three tasks and is formated to clearly present all of your results. Style and format does count for this assignment, so please take the time to make sure everything looks good and your data and code are properly formated.
+
+For this class I will not enforce any particular coding style, however it is important that the code you and your team produces is *readable* and *consistent* in its formating. There are several R style guides online, e.g. from [Google](https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml) and from [Hadley Wickham](http://r-pkgs.had.co.nz/style.html). As a group you should decide on what conventions you will use and the entire team should conform to them as much as possible.
+
+<br/>

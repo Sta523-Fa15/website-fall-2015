@@ -1,0 +1,31 @@
+---
+title: "Matching Example - R History"
+date: "September 5, 2014"
+output: html_document
+---
+
+```{r echo=FALSE}
+d = readLines("~/Desktop/Sta523/Data/world_cup_goals_raw.txt")
+```
+
+```{r eval=FALSE}
+d = readLines("~cr173/Sta523/data/world_cup_goals_raw.txt")
+```
+
+```{r}
+library(stringr)
+d[1]
+t = d[1]
+t
+str_match_all(t, "id=")
+str_match_all(t, " id=")
+str_match_all(t, " id=\"\"")
+str_match_all(t, " id=\".*\"")
+str_match_all(t, " id=\"[a-z0-9]*\"")
+str_match_all(t, " id=\"([a-z0-9]*)\"")
+str_match_all(d[1:3], " id=\"([a-z0-9]*)\"")
+str_match_all(t, " class=\"[a-z ]\"")
+str_match_all(t, " class=\"[a-z\ ]\"")
+str_match_all(t, " class=\"[a-z ]*\"")
+str_match_all(t, " class=\"([a-z ]*)\"")
+```

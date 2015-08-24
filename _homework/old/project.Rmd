@@ -1,0 +1,18 @@
+---
+layout: page
+title: "Final Project"
+---
+
+
+## Assignment
+
+The final project for this class is open ended, your task is to do something interesting with R that we have not explicitly cover yet in class. This could take the form of a data analysis task, production, cleaning, and organization of an interesting data set, and or the creatation of a tool or tools for some meaningful task. There is no requirement on what you can do, other than you should talk with me first to make sure that the score of what you are planning is reasonable (you should not be too lazy or too ambitious).
+
+You will be allowed to form your own teams with between 1 and 4 members, although you will need to have a very compelling reason to work by yourself.
+
+
+## Deadlines
+
+You should have some general idea of what you would like to do for your project and who else will be on your team by the end of this week (11/1/14). What this means is that by Sunday you should have emailed me with a short 2 or 3 sentence summary of your idea and a list of the other members of your team. If for whatever reason you cannot find a team, please let me know and I will help to match you with an existing team that needs additional members. Once teams have been established I will create public github repositories in the Sta523_Fa14 organization and invite the members of each team.
+
+The completed final project will be due by midnight Friday, December 12th. As with the homeworks in the class, all your work including code and write up / documentation should be on your teams github repository and I will base my grading on what is present in the master branch at the deadline. 

@@ -1,0 +1,232 @@
+---
+layout: page
+title: Shapefiles and rgeos
+reading: "<a href='http://en.wikipedia.org/wiki/Shapefile'>Shapefiles</a> <br/> <a href='http://en.wikipedia.org/wiki/DE-9IM'>Dimensionally Extended 9-Intersection Model</a>"
+notes: "<a href='https://github.com/Sta523-Fa14/hw_examples/tree/master/hw2'>HW2 Makefile Example</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: true
+slides: true
+---
+
+```{r, echo=FALSE}
+options(width = 110)
+```
+
+# Shapefiles
+
+## Data
+
+Today's data is all from Mike Bostock's `us-atlas` git repository - https://github.com/mbostock/us-atlas.
+
+Available on `saxon` in `~cr173/Sta523/data/us-atlas/shp/us`.
+
+```{r}
+dir("~/Sta523/data/us-atlas/shp/us/","*.shp")
+```
+
+##  Shapefile components
+
+```
+$ ls -lh ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered*
+-rw-r--r--+ 1 cr173 visitor 8.8K Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.dbf
+-rw-r--r--+ 1 cr173 visitor  167 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.prj
+-rw-r--r--+ 1 cr173 visitor  772 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.sbn
+-rw-r--r--+ 1 cr173 visitor  156 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.sbx
+-rw-r--r--+ 1 cr173 visitor  11M Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.shp
+-rw-r--r--+ 1 cr173 visitor  596 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.shx
+-rw-r--r--+ 1 cr173 visitor  19K Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.txt
+-rw-r--r--+ 1 cr173 visitor 7.4K Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.xml
+```
+
+<br/>
+
+<div class="columns-2">
+Required files :
+
+* `.shp` - the feature geometry data
+* `.shx` - shape index
+* `.dbf` - columnar attributes for each shape, in dBase IV format
+
+
+Optional files :
+
+* `.prj` - coordinate system and projection information
+* `.sbn` and `.sbx` - spatial indexes of the features
+* `.xml` - geospatial metadata
+</div>
+
+## Shapefile info
+
+```{r, error=TRUE}
+suppressMessages(library(rgdal))
+ogrInfo("/home/vis/cr173/Sta523/data/us-atlas/shp/us/","states-unfiltered")
+```
+
+## Reading a Shapefile
+
+```{r, error=TRUE}
+states = readOGR("/home/vis/cr173/Sta523/data/us-atlas/shp/us/","states-unfiltered", stringsAsFactors=FALSE)
+class(states)
+```
+
+## Shapefile contents (data)
+
+```{r}
+states@data
+```
+
+## Shapefile contents (shapes)
+
+```{r, fig.align='center'}
+plot(states, col="lightgrey", axes=TRUE)
+```
+
+## Shapefile contents (shapes) cont.
+
+```{r, fig.align='center'}
+plot(states[states$ORDER_ADM %in% 1:48,], col="lightgrey", axes=TRUE)
+```
+
+## Why Illinois twice?
+
+```{r, fig.align='center'}
+plot(states[states$STATE == "Illinois",], col=c("lightgrey","lightblue"), axes=TRUE)
+```
+
+## Why Michigan twice?
+
+```{r, fig.align='center'}
+plot(states[states$STATE == "Michigan",], col=c("lightgrey","lightblue"), axes=TRUE)
+```
+
+## Removing duplicates / the Great Lakes
+
+```{r, fig.align='center'}
+states = states[!duplicated(states$STATE),]
+plot(states[states$ORDER_ADM %in% 1:48,], col="lightgrey", axes=TRUE)
+```
+
+## Railroads info
+
+```{r, error=TRUE}
+ogrInfo("/home/vis/cr173/Sta523/data/us-atlas/shp/us/","railroads")
+```
+
+## Railroad LineStrings
+ 
+```{r, error=TRUE}
+railroads = readOGR("/home/vis/cr173/Sta523/data/us-atlas/shp/us/","railroads",stringsAsFactors=FALSE)
+class(railroads)
+```
+
+## Railroad data
+
+```{r}
+head(railroads@data, n=10)
+```
+
+## Union Pacific tracks
+
+```{r}
+owners = railroads@data[,c("RROWNER1","RROWNER2","RROWNER3")]
+owners[is.na(owners[])] = ""
+
+up_i = railroads$RROWNER1 == "Union Pacific Railroad Company" |
+       railroads$RROWNER2 == "Union Pacific Railroad Company" |
+       railroads$RROWNER3 == "Union Pacific Railroad Company"
+
+up_rails = railroads[up_i,]
+```
+
+## Union Pacific tracks (cont.)
+
+```{r, collapse=TRUE, fig.align='center'}
+plot(states[states$ORDER_ADM %in% 1:48,], border="lightgrey", axes=TRUE)
+plot(up_rails, lwd=2, add=TRUE)
+```
+
+## Which states contain Union Pacific Tracks?
+
+```{r}
+library(rgeos)
+sec = gIntersects(states,up_rails,byid=TRUE)
+dim(sec)
+states$STATE[apply(sec,2,any)]
+```
+
+## Spatial predicates in rgeos
+
+<div class="columns-2">
+<div class="columns-2">
+* gContains
+* gContainsProperly 
+* gCovers 
+* gCoveredBy 
+* gCrosses 
+* gDisjoint
+* gEquals 
+* gEqualsExact 
+* gIntersects
+* gOverlaps 
+* gTouches 
+* gWithin
+</div>
+![predicates](imgs/predicates.png)
+</div>
+
+## Dimensionally Extended 9-Intersection Model
+
+<div class="centered">
+![](imgs/de9im.png)
+</div>
+
+## Find the Union Pacific tracks in California
+
+```{r, fig.align='center'}
+up_cal = gIntersection(up_rails,states[states$STATE == "California",])
+
+plot(states[states$STATE == "California",], border="lightgrey", axes=TRUE)
+plot(up_cal, lwd=2, add=TRUE)
+```
+
+## Find areas within 50 kms of Nevada
+
+UTM - http://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system
+
+```{r}
+nevada  = states[states$STATE == "Nevada",]
+nev_utm = spTransform(nevada, CRS("+proj=utm +zone=11 +ellps=WGS84 +datum=WGS84"))
+
+nev_buf = gBuffer(nev_utm, width=50000)
+```
+
+<div class="columns-2">
+```{r, fig.align='center', out.width='400px'}
+plot(nev_utm, axes=TRUE, xlim=c(1e5, 9e5), 
+     ylim=c(38e5, 47e5), asp=1)
+```
+
+```{r, fig.align='center', out.width='400px'}
+plot(nev_buf, axes=TRUE, xlim=c(1e5, 9e5), 
+     ylim=c(38e5, 47e5), asp=1)
+```
+</div>
+
+## Find areas within 50 kms of Nevada (cont.)
+
+```{r, fig.align='center', echo=-2}
+out = spTransform(gDifference(nev_buf, nev_utm), CRS(proj4string(states)))
+par(mar=c(4,4,1,1))
+plot(states, xlim=c(-125,-110), ylim=c(30,45), axes=TRUE)
+plot(out, col=adjustcolor("blue",alpha=0.5), add=TRUE, border=rgb(0,0,0,alpha=0))
+```
+
+## Exercise
+
+* Load the roads data from `roads-unmerged.shp`, note that this is a largish file and may take a while to load into R.
+
+* Create a plot of the interstate highway system (this shapefile contains many additional road line segments) overlayed on a map of the lower 48 states.
+
+* Use a spatial predicate function to figure out which states I-10 passes through.

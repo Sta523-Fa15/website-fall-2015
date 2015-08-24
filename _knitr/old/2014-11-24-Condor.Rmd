@@ -1,0 +1,302 @@
+---
+layout: page
+title: HTCondor
+reading: "<a href='https://stat.duke.edu/wiki/index.php/Condor'>Condor</a>"
+notes: ""
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+
+## Really big jobs
+
+What do you do when one machine is not enough? (Meaning everything is optimized and things still take forever)
+
+<br/>
+
+* We will cover what to do if things can be parallelized
+
+<br/>
+
+* If they can't - learn to be patient
+
+
+## Long running jobs
+
+Some of you may have noticed if you launch a long running process on a remote machine (or locally)
+
+* If the connection closes your job dies
+
+* Can be prevented by prefixing your command with `nohup`
+
+<div class="centered">
+`nohup Rscript long_analysis.R`
+</div>
+
+<br style="margin:10px" />
+
+* Can check on status using `ps` or `top` but no way to directly interact with process
+
+    * Good idea to pipe output to a file
+
+    * Terminate using PID and `kill`
+
+    * If you really want interactivity use `screen`
+
+
+## Being a good citizen
+
+* You are not the only user on a system - many of the departments systems also serve as desktops.
+
+* Disrupt other users as little as possible
+
+* Don't use all the CPU or all the memory
+
+* Long running / multi-CPU jobs should use `nice`
+
+    * Lowers (or raises) the priority of your task
+
+    * Prefix command, positive values indicate lower priority
+
+<div class="centered">
+`nice +19 Rscript long_analysis.R`
+</div>
+
+## Simple / small parallelism?
+
+If you have a simple situation (e.g. run three model variants)
+
+<br/>
+
+Launch things manually 
+
+* ssh to several servers
+
+* Run the command with `nohup` and `nice`
+
+* Pipe output to a file
+
+* Periodically check on progress
+
+<br/>
+
+This type of thing is easily scriptable via the shell or R for more complex jobs
+
+
+## Lots of parallelism?
+
+Use HTCondor - a distributed job management system that scavenges resources from systems in the department and/or university.
+
+* Used by Stats, and Physics, and OIT, and ...
+
+* Easiest access to the largest pool of CPUs without having to deal with Duke's cluster
+
+* Has limitations - not ideal for long running jobs in R
+
+* Recently setup in the department, documentation and tools are still forthcoming
+
+
+## Condor eligible jobs
+
+Condor is ideal for embarrassingly parallel tasks
+
+<br/>
+
+Your task / job must ...
+
+* Be able to run in the background
+
+* No direct interaction
+
+* Moderate run times 
+
+* *Single threaded*
+
+
+
+
+## Condor Submit files
+
+```
+Universe     = vanilla
+Executable   = /usr/bin/R
+Input        = mcpi.R
+Output       = mcpi_out_$(Process)
+Log          = mcpi_log
+Arguments    = --slave
+Requirements = (OpSys == "LINUX" && Arch == "x86_64")
++Department  = StatSci
+
+queue 5
+```
+
+
+## input / output
+
+Condor interprets these arguments as the following shell command:
+
+<div class="centered">
+`executable arguments < input > output`
+</div>
+
+<br/>
+
+for our R example this amounts to
+
+<div class="centered">
+`/usr/bin/R --slave < mcpi.R > mcpi_out_1`
+</div>
+<br/>
+
+being run on each server chosen by Condor.
+
+## Condor Submit - universe
+
+The universe type controls how condor runs jobs
+
+<br/>
+
+Unless you know what you are doing / have a compelling reason you should be using **vanilla**
+
+  * Allows for almost any serial job
+
+  * Automated file handling (copies input and output files)
+
+  * *No checkpointing*
+
+
+## queue
+
+`queue n` adds n job(s) to the pool using the preceding arguments.
+
+<br/>
+
+Used with `$(Process)`, which expands to the relevant process id
+
+<br/>
+
+Jobs can also be queued explicitly one by one
+
+```
+output       = mcpi_out_1
+log          = mcpi_log_1
+arguments    = --slave
+queue
+
+output       = mcpi_out_2
+log          = mcpi_log_2
+arguments    = --vanilla --quiet
+queue
+```
+
+
+## Requirements and Rank
+
+*Requirements* keyword is used to specify necessary characteristics for your job, e.g.
+
+* `OpSys == "LINUX"` - require linux
+
+* `Arch == "x86_64"` - require 64 bit CPU
+
+* `Memory > 4096` - require more than 4GB of memory
+
+<br/>
+
+It is also possible to express system *preferences* using the `rank` keyword
+
+
+
+## Submitting jobs
+
+Condor jobs must be submitted via the submit server
+
+```
+ssh submit.stat.duke.edu
+```
+
+<br/>
+
+Jobs are added to the queue via `condor_submit`
+
+
+```
+$ condor_submit mcpi.submit 
+Submitting job(s).....
+5 job(s) submitted to cluster 26.
+```
+
+
+
+## Checking status
+
+```
+$ condor_q
+
+-- Submitter: submit.stat.duke.edu : <152.3.7.21:9830> : submit.stat.duke.edu
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD               
+  26.0   cr173          11/24 11:55   0+00:00:00 I  0   0.0  R --slave         
+  26.1   cr173          11/24 11:55   0+00:00:21 R  0   0.0  R --slave         
+  26.2   cr173          11/24 11:55   0+00:00:21 R  0   0.0  R --slave         
+  26.3   cr173          11/24 11:55   0+00:00:21 R  0   0.0  R --slave         
+  26.4   cr173          11/24 11:55   0+00:00:21 R  0   0.0  R --slave         
+
+5 jobs; 0 completed, 0 removed, 1 idle, 4 running, 0 held, 0 suspended
+```
+
+
+## Job details {.smaller}
+
+```
+$ condor_q -analyze 26.3
+
+-- Submitter: submit.stat.duke.edu : <152.3.7.21:9830> : submit.stat.duke.edu
+---
+026.003:  Request has not yet been considered by the matchmaker.
+
+User priority for cr173@stat.duke.edu is not available, attempting to analyze without it.
+---
+026.003:  Run analysis summary.  Of 686 machines,
+      0 are rejected by your job's requirements 
+    168 reject your job because of their own requirements 
+      0 match and are already running your jobs 
+      0 match but are serving other users 
+    518 are available to run your job
+
+The following attributes are missing from the job ClassAd:
+
+GPU
+CheckpointPlatform
+```
+
+
+## Removing jobs / processes {.smaller}
+
+Removing a single process:
+```
+$ condor_rm 26.3
+Job 26.3 marked for removal
+```
+
+Removing an entire job:
+```
+$ condor_rm 26
+All jobs in cluster 26 have been marked for removal
+```
+
+Removing all jobs:
+```
+$ condor_rm -all
+All jobs have been marked for removal
+```
+
+
+# Acknowledgments
+
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* [An Introduction to Using HTCondor](http://research.cs.wisc.edu/htcondor/HTCondorWeek2014/presentations/MillerK_IntroTutorial.pdf)

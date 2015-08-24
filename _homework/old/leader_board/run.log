@@ -1,0 +1,86 @@
+
+R version 3.1.1 (2014-07-10) -- "Sock it to Me"
+Copyright (C) 2014 The R Foundation for Statistical Computing
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> suppressMessages(library(rgdal))
+> suppressMessages(library(rgeos))
+> suppressMessages(library(knitr))
+> 
+> pp = readOGR(path.expand("/home/vis/cr173/Sta523/data/nypp/"), "nypp")
+OGR data source with driver: ESRI Shapefile 
+Source: "/home/vis/cr173/Sta523/data/nypp/", layer: "nypp"
+with 77 features and 3 fields
+Feature type: wkbPolygon with 2 dimensions
+> pp = pp[pp@data$Precinct <= 34,]
+> 
+> pp = spTransform(pp, CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0"))
+> 
+> 
+> 
+> res = rep(0, 8)
+> 
+> for(i in 1:8)
++ {
++     if (i %in% c(3,5,7))
++     {
++         res[i] = Inf
++         next
++     }
++ 
++     d = readOGR(paste0("data/team",i,".json"), "OGRGeoJSON", verbose=FALSE)
++     names(d) = tolower(names(d))
++ 
++     for(p in pp$Precinct)
++     {
++         true = pp[pp$Precinct == p,]
++         if (p %in% d$precinct)
++         {
++             pred = d[d$precinct == p,]
++             res[i] = res[i] + gArea(gSymdifference(pred,true))
++ 
++         } else { 
++             cat("Team", i, "missing Precinct", p, "!\n")
++             res[i] = res[i] + gArea(true)
++         }
++     }   
++ }
+Team 1 missing Precinct 14 !
+Team 1 missing Precinct 18 !
+Team 1 missing Precinct 22 !
+Team 4 missing Precinct 22 !
+> 
+> Place = c("1st","2nd","3rd","4th","5th","6th","7th","8th")
+> 
+> lb = data.frame( Team = paste("Team",1:8), Score = round(res * 1e8), stringsAsFactors=FALSE)
+> 
+> lb = cbind(Place,lb[order(lb$Score),])
+> rownames(lb) = NULL
+> 
+> 
+> header = c("---",
++            "layout: page",
++            "title: Leader Board - HW 3",
++            "---",
++            "\n")
+> 
+> table = kable(lb, output=FALSE)
+> 
+> 
+> write(header, "index.md")
+> write(table,  "index.md", append=TRUE)
+> 

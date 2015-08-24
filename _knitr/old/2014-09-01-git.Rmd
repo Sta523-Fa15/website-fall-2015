@@ -1,0 +1,450 @@
+---
+layout: page
+title: Using git and github
+reading: "<a href='https://www.atlassian.com/git/'>Git tutotials</a>"
+notes: "<a href='https://training.github.com/kit/downloads/github-git-cheat-sheet.pdf'>Git Cheat Sheet</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: true
+---
+```{r echo=FALSE}
+source("../util/bash_engine.R")
+
+opts_chunk$set(root = "~")
+#opts_chunk$set(reppat = "Desktop/Sta523/")
+```
+
+## Passphrases on saxon
+
+Edit your `.login` file on saxon to include the following line:
+
+```bash
+if ("`hostname`" == "saxon.stat.duke.edu") then
+    eval `keychain --eval id_rsa`
+endif
+```
+
+The first time you login you will be asked for the passphrase, after that you will not need to reenter it unless saxon gets restarted.
+
+# Git Background
+
+## Why version control? {.smaller}
+
+<div class="centered" style="margin-top: -1em;">
+![PhD Comics](imgs/phd_comics_vc.gif)
+</div>
+
+## Why version control?
+
+* Simple formal system for tracking all changes to a project
+
+* Time machine for your projects
+    * Track blame and/or praise
+    * Remove the fear of breaking things
+
+* Learning curve is steep, but when you need it you *REALLY* need it
+
+<br/>
+<br/>
+
+<div class="centering">
+<blockquote>
+Your closest collaborator is you six months ago, but you don’t reply to emails.
+</blockquote>
+<cite>-- Paul Wilson, UW-Madison</cite>
+</div>
+
+## Why git?
+
+* Distributed
+    * Work online or offline
+    * Collaborate with large groups
+
+* Popular and Successful
+    * Active development
+    * Shiny new tools and ecosystems
+    * Fast
+
+* Tracks any type of file
+
+* Branching
+    * Smarter merges
+
+# Git Demo
+
+## Some initial configuration
+
+We want to let `git` know who we are so there are some simple configuration options we should setup.
+
+Let's first tell `git` who we are, and what editor we want to use.
+
+```bash
+$ git config --global user.name "Colin Rundel"
+$ git config --global user.email "rundel@gmail.com"
+$ git config --global color.ui true
+$ git config --global core.editor nano
+$ git config --global push.default matching
+```
+
+We also want to set this up on saxon too, so
+
+```bash
+$ ssh cr173@saxon.stat.duke.edu
+[cr173@saxon ~]$ git config --global user.name "Colin Rundel"
+...
+```
+
+## Working with github {.smaller}
+
+I've already created a repository for each team on the [course's github page](https://github.com/Sta523-Fa14/). What we are going to do now is create a local copy of that repository on our local machine - to do this we will use git's `clone` command, which needs the repositories url:
+
+
+![github clone url](imgs/github_clone.png)
+
+
+## Cloning a repository
+
+```bash
+$ git clone git@github.com:Sta523-Fa14/ExampleTeam.git
+Cloning into 'ExampleTeam'...
+remote: Counting objects: 4, done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 4 (delta 0), reused 0 (delta 0)
+Receiving objects: 100% (4/4), done.
+Checking connectivity... done.
+$ ls
+ExampleTeam
+$ ls -a ExampleTeam/
+.          ..         .DS_Store  .git       .gitignore README.md
+```
+
+## Checking the status
+
+```bash
+$ cd ExampleTeam
+$ git status
+On branch master
+Your branch is up-to-date with 'origin/master'.
+nothing to commit, working directory clean
+```
+
+## Making changes
+
+Lets edit the `README.md` file to include team member names and email addresses.
+
+```bash
+$ cat README.md
+Example
+=======
+
+Example repo
+$ nano README.md
+$ cat README.md
+ExampleTeam Repo
+=======
+
+## Team Members
+
+* Colin Rundel - rundel@gmail.com
+```
+
+## Checking the status again
+
+```bash
+$ git status
+On branch master
+Your branch is up-to-date with 'origin/master'.
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+    modified:   README.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+```
+
+## Adding a new file
+
+```bash
+$ echo -e "* Add other team member's info\n* Fix formatting\n" > TODO
+$ cat TODO
+* Add other team member's info
+* Fix formatting
+
+```
+
+## Checking the status yet again
+
+```bash
+$ git status
+On branch master
+Your branch is up-to-date with 'origin/master'.
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+    modified:   README.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+
+    TODO
+
+no changes added to commit (use "git add" and/or "git commit -a")
+```
+
+## Lets save our changes
+
+* One file `README.md` is tracked and modified (repo is already has this file but our current version differs from the previously saved version)
+
+* The other file `TODO` is untracked (this file does not exist in the repo)
+
+Our next step is the same for both files - we want to *stage* our local changes using `git add`.
+
+```bash
+$ git add README.md
+$ git add TODO
+```
+
+##
+
+```bash
+$ git status
+On branch master
+Your branch is up-to-date with 'origin/master'.
+Changes to be committed:
+  (use "git reset HEAD <file>..." to unstage)
+
+    modified:   README.md
+    new file:   TODO
+
+```
+
+## What is staging?
+
+By using `git add` we have made git aware of the current version of both files, but we have not actually saved the changes yet.
+
+To save the changes (locally) we need to *commit* them using `git commit`, since this change will be saved it is customary to add a message about the nature of the changes being made (for future reference).
+
+```bash
+git commit -m "Added Colin's information to README; Added TODO file."
+[master f9c548c] Added Colin's information to README; Added TODO file.
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+ create mode 100644 TODO
+```
+
+##
+
+```bash
+$ git status
+On branch master
+Your branch is ahead of 'origin/master' by 1 commit.
+  (use "git push" to publish your local commits)
+nothing to commit, working directory clean
+```
+
+We've saved our changes but we're now out of sync with the repository on github.
+
+## Making the problem worse
+
+What if at the same time I was making these edits my teammate John Doe was making changes to `README.md` on github?
+
+![github README edit](imgs/github_README_edit.png)
+
+![github README commit](imgs/github_README_commit.png)
+
+##
+
+![github README status](imgs/github_README_status.png)
+
+## Syncing repos
+
+We can attempt to send our changes back to github by using `git push`
+
+```bash
+$ git push
+To git@github.com:Sta523-Fa14/ExampleTeam.git
+ ! [rejected]        master -> master (fetch first)
+error: failed to push some refs to 'git@github.com:Sta523-Fa14/ExampleTeam.git'
+hint: Updates were rejected because the remote contains work that you do
+hint: not have locally. This is usually caused by another repository pushing
+hint: to the same ref. You may want to first integrate the remote changes
+hint: (e.g., 'git pull ...') before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+```
+
+## Merging remote changes
+
+```bash
+$ git pull
+remote: Counting objects: 3, done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 3 (delta 0), reused 0 (delta 0)
+Unpacking objects: 100% (3/3), done.
+From github.com:Sta523-Fa14/ExampleTeam
+   6b79df7..804e091  master     -> origin/master
+Auto-merging README.md
+CONFLICT (content): Merge conflict in README.md
+Automatic merge failed; fix conflicts and then commit the result.
+```
+
+##
+
+```bash
+$ git status
+On branch master
+Your branch and 'origin/master' have diverged,
+and have 1 and 1 different commit each, respectively.
+  (use "git pull" to merge the remote branch into yours)
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+
+    both modified:   README.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+```
+
+##
+
+```bash
+$ cat README.md 
+ExampleTeam Repo
+=======
+
+## Team Members
+
+<<<<<<< HEAD
+* Colin Rundel - rundel@gmail.com
+=======
+* John Doe - j.doe@gmail.com
+>>>>>>> 804e09178910383c128035ce67a58c9c1df3f558
+```
+
+* `<<<<<<<` - Indicates the start of the merge conflict.
+* `=======` - Indicates the break point used for comparison. 
+* `>>>>>>>` - Indicates the end of the lines that had a merge conflict.
+
+## Resolving merge conflicts
+
+Edit the merged file to reflect the changes you actually want.
+
+```bash
+$ nano README.md
+$ cat README.md
+ExampleTeam Repo
+=======
+
+## Team Members
+
+* Colin Rundel - rundel@gmail.com
+* John Doe - j.doe@gmail.com
+```
+
+## Stage and commit changes
+
+```bash
+$ git add README.md 
+retBook-2:ExampleTeam rundel$ git status
+On branch master
+Your branch and 'origin/master' have diverged,
+and have 1 and 1 different commit each, respectively.
+  (use "git pull" to merge the remote branch into yours)
+All conflicts fixed but you are still merging.
+  (use "git commit" to conclude merge)
+
+Changes to be committed:
+
+    modified:   README.md
+
+$ git commit -m "Merge changes"
+```
+
+##
+
+```bash
+$ git status
+On branch master
+Your branch is ahead of 'origin/master' by 2 commits.
+  (use "git push" to publish your local commits)
+nothing to commit, working directory clean
+$ git push
+Counting objects: 7, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (6/6), done.
+Writing objects: 100% (7/7), 791 bytes | 0 bytes/s, done.
+Total 7 (delta 1), reused 0 (delta 0)
+To git@github.com:Sta523-Fa14/ExampleTeam.git
+   804e091..9c4a5e7  master -> master
+```
+
+##  {.smaller}
+
+```bash
+$ git log
+commit 9c4a5e78866e00fccb78ddf170b62bc74812a7c7
+Merge: f9c548c 804e091
+Author: Colin Rundel <rundel@gmail.com>
+Date:   Sun Aug 31 21:19:11 2014 -0400
+
+    Merge changes
+
+commit 804e09178910383c128035ce67a58c9c1df3f558
+Author: Colin Rundel <rundel@gmail.com>
+Date:   Sun Aug 31 17:43:47 2014 -0400
+
+    Added John Doe to README
+
+commit f9c548c0db0ee9b547a73ab44bacbba2a7facf04
+Author: Colin Rundel <rundel@gmail.com>
+Date:   Sun Aug 31 17:36:37 2014 -0400
+
+    Added Colin's information to README; Added TODO file.
+
+commit 6b79df75ce42e43ead368b0bb7e52246cf5ecc10
+Author: Colin Rundel <rundel@gmail.com>
+Date:   Sun Aug 31 16:18:27 2014 -0400
+
+    Initial commit
+```
+
+## 
+
+![Github Status](imgs/github_README_push.png)
+
+## 
+
+![Github Status Commits](imgs/github_README_push_commit.png)
+
+
+# Application Exercise
+
+## Editing your Team's github repo
+
+* Make sure that your ssh public key encryption is working
+```bash
+$ ssh -T git@github.com
+Hi rundel! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+* Everyone in your team should create a local copy of the team repo using `git pull` with the appropriate url.
+
+* Individually update the local `README.md` file
+
+    * Pick a new team name
+    * Each team member should add their name and email address to their local repo copy
+    * Stage and commit any local changes you make
+    * Pick an order and one at a time, push your changes back to github
+        * Handle any merge conflicts that arise
+
+
+# Acknowledgments
+
+## Acknowledgments
+Above materials are derived in part from the following sources:
+
+* Karl Broman - [Wisc's Tools4RR](http://kbroman.org/Tools4RR/)
+* [Software Carpentry Project](http://software-carpentry.org/)
