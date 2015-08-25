@@ -8,7 +8,7 @@ title: Course Information
     Chapman and Hall/CRC, 1st edition, 2014 (ISBN: 978-1466586963)
 
 * [R Packages](http://r-pkgs.had.co.nz/) - Wickham \\
-    O’Reilly, 1st edition, 2015 (ISBN: 978-8132223399)
+    O’Reilly, 1st edition, 2015 (ISBN: 978-1491910597)
 
 
 
