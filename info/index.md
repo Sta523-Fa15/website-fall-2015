@@ -17,7 +17,7 @@ title: Course Information
 
 
 ### Labs:
-* 01L - Fridays 1:25 - 2:40 pm, Perkins Link 71 (Classroom 5)
+* 01L - Fridays 1:25 - 2:40 pm, LSRC A247
 
 
 ### Office Hours:

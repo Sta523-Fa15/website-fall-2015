@@ -2,10 +2,327 @@
 layout: page
 title: Using ssh and the shell
 reading: ""
-notes: ""
+notes: "Code Academy - <a href='https://www.codecademy.com/en/courses/learn-the-command-line'>Learn the command line</a>"
 output: 
     ioslides_presentation:
         widescreen: true
-slides: false
-link: false
+slides: true
+link: true
 ---
+
+# ssh
+
+## Secure shell (ssh)
+
+* A secure tool for connecting and interacting with remote systems
+* Uses public key encryption
+* Run a single command or work interactively
+* Lots of other neat tricks (proxy, port forwarding, many more)
+
+## Connecting to saxon
+
+* Everyone should have a visitor account of the stats servers now
+* Try to connect to make sure everything is working...
+
+```
+$ ssh cr173@saxon.stat.duke.edu
+The authenticity of host 'saxon.stat.duke.edu (152.3.7.55)' can't be established
+.
+RSA key fingerprint is 74:30:5a:d0:cd:a8:d2:6f:a6:e9:c6:80:bb:eb:b4:ba.
+Are you sure you want to continue connecting (yes/no)?yes
+cr173@saxon.stat.duke.edu's password:
+[cr173@saxon ~]$
+```
+
+## Working remotely
+
+You should now be able to run commands remotely on `saxon`. We can interactively run commands on the remote system. Try `hostname` to see which system you are connected to, and `whoami` to see your user name.
+
+```
+cr173@saxon [~]$ hostname
+saxon.stat.duke.edu
+cr173@saxon [~]$ whoami
+cr173
+```
+
+## Finishing up
+
+Once you are done on the server you can exit by:
+
+* Running `exit`
+* Ctrl-D
+* Wait long enough (connection will time out)
+
+
+# Working remotely
+
+## Why the shell
+
+* Programmatically interact with OS (file system)
+* Origins in the 1960s and 1970s
+* "designed by computer scientists for computer scientists" 
+* Evolution - interactive command language to scripting programming language
+* "quick and dirty" prototyping
+
+## Unix Design Philosophy
+
+"Even though the UNIX system introduces a number of innovative programs and techniques, no single program or idea makes it work well. Instead, what makes it effective is the approach to programming, a philosophy of using the computer. Although that philosophy can't be written down in a single sentence, at its heart is the idea that the power of a system comes more from the relationships among programs than from the programs themselves. Many UNIX programs do quite trivial things in isolation, but, combined with other programs, become general and useful tools."
+
+
+The UNIX Programming Environment, Brian Kernighan and Rob Pike
+
+## Where am I? (pwd, ls, cd)
+
+```
+cr173@saxon [~]$ pwd
+/home/vis/cr173
+```
+
+```
+cr173@saxon [~]$ ls -l
+total 5
+drwx------+  2 cr173 visitor 11 Aug 25 19:53 mail
+drwx------+  2 cr173 visitor  2 Dec 12 2011  Mail
+drwxr-xr-x+  2 cr173 visitor  2 Aug 25 20:37 Sta523
+```
+
+```
+cr173@saxon [~]$ cd Sta523
+cr173@saxon [Sta523]$ pwd
+/home/vis/cr173/Sta523
+```
+
+## Special directories {.smaller}
+
+```
+cr173@saxon [Sta523]$ ls -l
+total 1
+drwxr-xr-x+ 2 cr173 visitor 2 Aug 25 20:41 filesystem
+```
+
+```
+cr173@saxon [Sta523]$ ls -la
+total 18
+drwxr-xr-x+  3 cr173 visitor   3 Aug 25 20:41 .
+drwxr-xr-x+ 69 cr173 visitor 104 Aug 25 20:37 ..
+drwxr-xr-x+  2 cr173 visitor   2 Aug 25 20:41 filesystem
+```
+
+## Special directories (cont.) {.smaller}
+
+```
+cr173@saxon [Sta523]$ cd .
+cr173@saxon [Sta523]$ pwd
+/home/vis/cr173/Sta523
+```
+
+```
+cr173@saxon [Sta523]$ cd ..
+cr173@saxon [~]$ pwd
+/home/vis/cr173/Sta523
+```
+
+
+## Creating or Deleting directories
+
+```
+cr173@saxon [~]$ cd Sta523
+cr173@saxon [Sta523]$ ls -l
+total 2
+drwxr-xr-x+ 2 cr173 visitor 2 Aug 25 20:41 filesystem
+```
+
+```
+cr173@saxon [Sta523]$ mkdir test
+cr173@saxon [Sta523]$ ls -l
+total 2
+drwxr-xr-x+ 2 cr173 visitor 2 Aug 25 20:41 filesystem
+drwxr-xr-x+ 2 cr173 visitor 2 Aug 25 20:44 test
+```
+
+##
+
+```
+cr173@saxon [Sta523]$ rmdir test/
+cr173@saxon [Sta523]$ ls -l
+total 2
+drwxr-xr-x+ 2 cr173 visitor 2 Aug 25 20:41 filesystem
+```
+
+
+## Exercise
+
+Connect to `saxon` and change to `Sta523/filesystem` directory in *my* home directory.
+
+```
+cr173@saxon [~]$ cd /home/vis/cr173/Sta523/filesystem
+```
+
+Along with your neighbors, explore and map out all of the files and subdirectories that are contained within `filesystem`. It will probably be easiest to do this by drawing a tree on a piece of paper.
+
+
+
+## Copying, moving and deleting (cp, mv, rm) {.smaller}
+
+```
+cr173@saxon [filesystem]$ ls -l
+total 4
+drwxr-xr-x+ 2 cr173 visitor  5 Aug 25 20:56 data
+-rw-r--r--+ 1 cr173 visitor 88 Aug 25 21:07 haiku.txt                            
+drwxr-xr-x+ 4 cr173 visitor  5 Aug 25 20:53 users
+```
+
+```
+cr173@saxon [filesystem]$ cp haiku.txt awesome_haiku.txt
+cr173@saxon [filesystem]$ ls -l
+total 5
+-rw-r--r--+ 1 cr173 visitor 88 Aug 25 21:07 awesome_haiku.txt
+drwxr-xr-x+ 2 cr173 visitor  5 Aug 25 20:56 data
+-rw-r--r--+ 1 cr173 visitor 88 Aug 25 21:07 haiku.txt
+drwxr-xr-x+ 4 cr173 visitor  5 Aug 25 20:53 users
+```
+
+```
+cr173@saxon [filesystem]$ rm awesome_haiku.txt
+cr173@saxon [filesystem]$ ls -l
+total 4
+drwxr-xr-x+ 2 cr173 visitor  5 Aug 25 20:56 data
+-rw-r--r--+ 1 cr173 visitor 88 Aug 25 21:07 haiku.txt
+drwxr-xr-x+ 4 cr173 visitor  5 Aug 25 20:53 users
+```
+
+##
+
+```
+cr173@saxon [filesystem]$ mv haiku.txt better_haiku.txt
+cr173@saxon [filesystem]$ ls -l
+total 4
+-rw-r--r--+ 1 cr173 visitor 88 Aug 25 21:07 better_haiku.txt
+drwxr-xr-x+ 2 cr173 visitor  5 Aug 25 20:56 data
+drwxr-xr-x+ 4 cr173 visitor  5 Aug 25 20:53 users
+```
+
+```
+cr173@saxon [filesystem]$ mv better_haiku.txt haiku.txt
+```
+
+## Wildcards and the shell
+
+* `*` -  matches any number of characters in a filename, including none.
+* `?` -  matches any single character.
+* `[ ]` - set of characters that may match a single character at that position.
+* `-` -   used within `[ ]` denotes a range of characters or numbers (eg. `[0-9]`).
+
+## 
+
+```
+cr173@saxon [filesystem]$ ls data/
+access.log  hardware.cfg  network.cfg
+```
+
+```
+cr173@saxon [filesystem]$ ls data/*.cfg
+data/hardware.cfg  data/network.cfg
+```
+
+
+## Home directory and `~`
+
+`~` is a special character that expands to the name of your home directory. If you append another user's login name to the character, it refers to that user's home directory.
+
+```
+cr173@saxon [filesystem]$ cd ~
+cr173@saxon [~]$ pwd
+/home/vis/cr173
+```
+
+```
+cr173@saxon [~]$ cd ~mc301
+cr173@saxon [mc301]$ pwd
+/home/fac/mc301
+```
+
+## Examining files (cat, more, head, tail)
+
+```
+cr173@saxon [~]$ cat ~/Sta523/filesystem/haiku.txt 
+All night with no sleep
+Caffeine your only partner
+Damn thing still won't work
+-chimera
+```
+
+##
+
+```
+cr173@saxon [~]$ head -n 2 ~/Sta523/filesystem/haiku.txt 
+All night with no sleep
+Caffeine your only partner
+```
+
+## 
+
+```
+cr173@saxon [~]$ tail -n 3 ~/Sta523/filesystem/haiku.txt 
+Caffeine your only partner
+Damn thing still won't work
+-chimera
+```
+
+## Pipes
+
+```
+cr173@saxon [~]$ cat ~/Sta523/filesystem/haiku.txt | grep ^[AC]
+All night with no sleep
+Caffeine your only partner
+```
+
+## Oroborus cleverness
+
+Want to see the 2nd line of the file and nothing else?
+
+```
+cr173@saxon [~]$ head -n 2 ~/Sta523/filesystem/haiku.txt | tail -n 1
+Caffeine your only partner
+```
+
+What about the penultimate (2nd to last) line?
+
+```
+cr173@saxon [~]$ tail -n 2 ~/Sta523/filesystem/haiku.txt | head -n 1
+Damn thing still won't work
+```
+
+
+## Secure copy (scp) {.smaller}
+
+Uses ssh to copy a file between systems. Lets grab a copy of `haiku.txt` for our local machine.
+
+```
+$ ls -la
+total 0
+drwxr-xr-x   2 rundel  staff    68 Aug 28 21:51 .
+drwxr-xr-x  98 rundel  staff  3332 Aug 28 21:51 ..
+$ scp cr173@saxon.stat.duke.edu:~/Sta523/filesystem/haiku.txt
+haiku.txt                                  100%   88     0.1KB/s   00:00    
+$ cat haiku.txt 
+All night with no sleep
+Caffeine your only partner
+Damn thing still won't work
+-chimera
+```
+
+## Exercise
+
+Create a *local* text file that contains your name and email address. Copy that file to your home directory on `saxon`.
+
+
+
+
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* Mark Hansen - [UCLA's Stat 202a](http://www.stat.ucla.edu/~cocteau/stat202a/index.html)
+* Karl Broman - [Wisc's Tools4RR](http://kbroman.org/Tools4RR/)
+* [Software Carpentry Project](http://software-carpentry.org/)
