@@ -4,8 +4,8 @@ title: TA Lecture - Michael Lindon
 output: 
     ioslides_presentation:
         widescreen: true
-slides: true
-link: true
+slides: false
+link: false
 ---
 
 
