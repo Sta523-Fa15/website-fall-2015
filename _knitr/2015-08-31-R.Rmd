@@ -1,8 +1,8 @@
 ---
 layout: page
 title: Control flow in R
-reading: ""
-notes: ""
+reading: "R style guides - <a href='https://google-styleguide.googlecode.com/svn/trunk/Rguide.xml'>Google</a> & <a href='http://r-pkgs.had.co.nz/style.html'>Hadley</a>"
+notes: "<a href='hw/hw0.html'>HW 0</a> - due Sat 9/5 by 2 pm"
 output:
     ioslides_presentation:
         widescreen: true
