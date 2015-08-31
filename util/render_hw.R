@@ -13,5 +13,5 @@ output_dir = paste0(dirname(output),"/")
 
 render(input, 
        output_format = html_document(),
-       output_dir = paste0("../",output_dir),
+       output_dir = paste0(output_dir),
        clean = TRUE, quiet = TRUE)
