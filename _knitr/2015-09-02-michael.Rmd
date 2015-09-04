@@ -4,8 +4,8 @@ title: TA Lecture - Michael Lindon
 output: 
     ioslides_presentation:
         widescreen: true
-slides: false
-link: false
+slides: true
+link: true
 ---
 
 
@@ -52,6 +52,11 @@ link: false
 ![Programming Languages](imgs/dataCamp2.png)
 </div>
 * [An excellent comparative study of these two languages for data science!](http://blog.datacamp.com/wp-content/uploads/2015/05/R-vs-Python-216-2.png)
+
+##Kaggle.com
+<div class="centered" style="margin-top: -1em;">
+![Programming Languages](imgs/kaggle.png)
+</div>
 
 ##Can't Decide? - Try Beaker Notebook
 <div class="centered" style="margin-top: -1em;">
@@ -138,6 +143,16 @@ Many flame wars have been fought between groups insisting that their editor of c
 * Large community providing a huge number of plugins
 * Excellent plugins available for autocompletion, fuzzy finding, navigation, language integration etc...
 * Ships as standard with most linux distributions.
+
+##Trending Editors: Sublime
+<div class="centered" style="margin-top: -1em;">
+![Programming Languages](imgs/sublime.png)
+</div>
+
+##Trending Editors: atom
+<div class="centered" style="margin-top: -1em;">
+![Programming Languages](imgs/atom.png)
+</div>
 
 #Shells
 ##Shells
@@ -263,3 +278,87 @@ receiving incremental file list
 sent 90 bytes  received 12464 bytes  2789.78 bytes/sec
 total size is 36238  speedup is 2.89
 ```
+
+##SSH Keys
+* Typing in your password everytime you scp or ssh is tiresome
+```bash
+lindon@michael-laptop:~$ ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/lindon/.ssh/id_rsa):  
+Created directory '/home/lindon/.ssh'.
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /home/lindon/.ssh/id_rsa.
+Your public key has been saved in /home/lindon/.ssh/id_rsa.pub.
+```
+* When prompted to enter a file, passphrase, same passphrase, simply press return
+* The last line will then be succeeded by the key’s fingerprint and random image.
+* The public and private key are found in (hidden) the /home/user/.ssh directory
+
+##A note on security
+* A public and a private key is generated (don't give the private one out)
+* Most strongly advise having a strong passphrase so that if your private key is compromised you still have the passphrase
+* However, instead of requiring a password to be entered, it now requires a passphrase to be entered, so nothing has been gained
+* I don't have a passphrase, because I get tired of typing it in every single painful time you push or pull something
+* As long as you keep your private key PRIVATE, then I wouldn't bother
+
+##Transfer the public key with ssh-copy-id
+```bash
+lindon@michael-laptop:~$ ssh-copy-id -i lindon@remotecomputer.com
+The authenticity of host 'remotecomputer (xx.xxx.xxx.xx)' can't be established.
+RSA key fingerprint is   :  :  :  :  :  :  :  :  :  :  :  :  :  :  :  :.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added 'remotecomputer,xx.xxx.xxx.xx' (RSA) to the list of known hosts.
+lindon@remotecomputer's password:
+Now try logging into the machine, with "ssh 'lindon@remotecomputer.com'", and check in:
+
+~/.ssh/authorized_keys
+
+to make sure we haven't added extra keys that you weren't expecting.
+
+lindon@michael-laptop:~$
+```
+* The -i option means that the default public key, i.e. ~/.ssh/id_rsa.pub, is used.
+
+##Login without password
+```bash
+lindon@michael-laptop:~$ ssh lindon@remotecomputer.com
+Welcome to Ubuntu 11.04 (GNU/Linux 2.6.38-11-generic x86_64)
+
+* Documentation:  https://help.ubuntu.com/
+
+Last login: Sun Sep 11 15:57:14 2011 from xx.xxx.xxx.xx
+lindon@remotecomputer:~$
+```
+
+##SSH Config
+* Creating an alias saves a lot of time
+```bash
+[michael@michael ~]$ cd .ssh
+[michael@michael .ssh]$ cat config
+Host saxon
+HostName saxon.stat.duke.edu
+User msl33
+[michael@michael .ssh]$ ssh saxon
+Last login: Sat Aug 29 19:16:35 2015 from foo.bar.foo.bar.com
+[msl33@saxon ~]$ 
+```
+
+##[SSH Keys with Gitub](https://help.github.com/articles/generating-ssh-keys/)
+* In the top right corner of any page, click your profile photo, then click Settings.
+* In the user settings sidebar, click SSH keys.
+* Click Add SSH key.
+* In the Title field, add a descriptive label for the new key. For example, if you're using a personal Mac, you might call this key "Personal MacBook Air".
+* Paste your key into the "Key" field.
+* Paste your key into the "Key" field.
+* Confirm the action by entering your GitHub password.
+* Test
+```bash
+ssh -T git@github.com
+```
+
+##[Switching from HTTP to SSH](https://help.github.com/articles/changing-a-remote-s-url/)
+* Most likely you've been pushing/pulling to your github repo over https
+* SSH is nicer, and with keys will not require login each time
+* To change this for your repository of interest you should switch the remote urls from ssh to http
+* Instructions linked in title
