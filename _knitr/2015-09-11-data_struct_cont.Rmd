@@ -1,0 +1,8 @@
+---
+layout: page
+title: R data structures cont.
+reading: ""
+notes: "<a href='hw/hw1.html'>Homework 1</a>"
+link: false
+---
+

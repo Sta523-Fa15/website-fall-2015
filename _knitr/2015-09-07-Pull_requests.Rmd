@@ -1,0 +1,12 @@
+---
+layout: page
+title: Pull Requests
+reading: "<a href='https://help.github.com/articles/proposing-changes-to-a-project-with-pull-requests/'>Pull Requests on Github</a>"
+notes: "Screencasts - <a href='https://youtu.be/4P_BJJaXwzw'>Pull Requests</a>, <a href='https://youtu.be/wrRxNi4z_s8'>Issues</a>"
+output:
+    ioslides_presentation:
+      widescreen: no
+slides: false
+link: false
+---
+
