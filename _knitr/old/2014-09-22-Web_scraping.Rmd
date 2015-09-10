@@ -1,8 +1,0 @@
----
-layout: page
-title: Web Scraping
-reading: ""
-notes: "<a href='hw/hw2.html'>Homework 2</a>, <br/><a href='https://github.com/Sta523-Fa14/hw_examples/tree/master/hw2/sbux_example'</a>Starbucks example repo</a>"
-slides: false
-link: false
----

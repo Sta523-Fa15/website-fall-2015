@@ -1,8 +1,0 @@
----
-layout: page
-title: Introduction to make
-reading: "<a href='http://kbroman.org/minimal_make/'>minimal make</a>, <a href='http://bost.ocks.org/mike/make/'>Why use make</a>"
-notes: "<a href='https://github.com/Sta523-Fa14/hw_examples/tree/master/hw2/make_example'</a>Make example repo</a>"
-slides: false
-link: false
----

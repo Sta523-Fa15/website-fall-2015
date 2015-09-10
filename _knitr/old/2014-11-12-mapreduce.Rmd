@@ -1,9 +1,0 @@
----
-layout: page
-title: MapReduce 
-reading: ""
-notes: "<a href='https://github.com/Sta523-Fa14/hw_examples/blob/master/hw5/'>MapReduce example</a>"
-slides: false
-link: false
----
-
