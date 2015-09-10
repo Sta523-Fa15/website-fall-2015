@@ -1,8 +1,8 @@
 ---
 layout: page
 title: Using ssh and the shell
-reading: ""
-notes: "Code Academy - <a href='https://www.codecademy.com/en/courses/learn-the-command-line'>Learn the command line</a>"
+reading: "Code Academy - <a href='https://www.codecademy.com/en/courses/learn-the-command-line'>Learn the command line</a>"
+notes: ""
 output: 
     ioslides_presentation:
         widescreen: true

@@ -1,8 +1,8 @@
 ---
 layout: page
 title: Introduction
-reading: ""
-notes: "Codeschool - <a href='https://www.codeschool.com/courses/try-r'>Try R</a>"
+reading: "Codeschool - <a href='https://www.codeschool.com/courses/try-r'>Try R</a>"
+notes: ""
 output: 
     ioslides_presentation:
       widescreen: no
