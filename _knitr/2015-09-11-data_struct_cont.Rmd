@@ -2,7 +2,8 @@
 layout: page
 title: R data structures cont.
 reading: ""
-notes: "<a href='hw/hw1.html'>Homework 1</a>"
+notes: "<a href='hw/hw1.html'>Homework 1</a> - due Sat 9/26 by 2 pm"
 link: false
+slides: false
 ---
 
