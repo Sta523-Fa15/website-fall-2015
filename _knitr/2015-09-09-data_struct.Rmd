@@ -347,7 +347,7 @@ Construct a factor variable (without using `factor`, `as.factor`, or related fun
 
 * Start with an *integer* vector and add the appropriate attributes.
 
-* What would you need to do if I decided that I'd prefer to have only three levels: `sun/cloud`, `rain`, `snow.
+* What would you need to do if I decided that I'd prefer to have only three levels: `sun/cloud`, `rain`, `snow`.
 
 # Data Frames
 
