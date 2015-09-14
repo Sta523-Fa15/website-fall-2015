@@ -1,0 +1,475 @@
+---
+layout: page
+title: Subsetting
+reading: "<a href='http://adv-r.had.co.nz/Subsetting.html'>Adv-R Subsetting</a>"
+notes: ""
+output:
+    ioslides_presentation:
+        widescreen: true
+slides: true
+---
+
+## Subsetting in General
+
+R has several different subsetting operators (`[`, `[[`, and `$`).
+
+The behavior of these operators will depend on the object they are being used with.
+
+In general there are 6 different data types that can be used to subset:
+
+
+<div class="columns-2">
+* Positive integers
+
+* Negative integers
+
+* Logical values
+
+* Empty
+
+* Zero
+
+* Character values (names)
+</div>
+
+# Subsetting Vectors
+
+## Atomic Vectors - Positive Ints {.smaller}
+
+Returns elements at the given location (*note R uses a 1-based not a 0-based indexing scheme*).
+
+```{r}
+x = c(1,4,7)
+x[c(1,3)]
+x[c(1,1)]
+x[c(1.9,2.1)]
+```
+
+## Generic Vectors - Positive Ints {.smaller}
+
+```{r}
+y = list(1,4,7)
+str( y[c(1,3)] )
+str( y[c(1,1)] )
+str( y[c(1.9,2.1)] )
+```
+
+## Atomic Vectors - Negative Ints {.smaller}
+
+Excludes elements at the given location
+
+```{r, error=TRUE}
+x = c(1,4,7)
+x[-1]
+x[-c(1,3)]
+x[c(-1,2)]
+```
+
+## Generic Vectors - Negative Ints {.smaller}
+
+```{r, error=TRUE}
+y = list(1,4,7)
+str( y[-1] )
+str( y[-c(1,3)] )
+y[c(-1,2)]
+```
+
+## Vectors - Logical Values {.smaller}
+
+Returns elements that correspond to `TRUE` in the logical vector. Length of the logical vector is expected to be the same of the vector being subsetted.
+
+<div class="columns-2">
+```{r}
+x = c(1,4,7,12)
+x[c(TRUE,TRUE,FALSE,TRUE)]
+x[c(TRUE,FALSE)]
+x[x %% 2 == 0]
+```
+<br/><br/><br/>
+
+```{r, error=TRUE}
+y = list(1,4,7,12)
+str( y[c(TRUE,TRUE,FALSE,TRUE)] )
+str( y[c(TRUE,FALSE)] )
+str( y[y %% 2 == 0] )
+```
+</div>
+
+## Vectors - Empty
+
+Returns the original vector.
+
+```{r}
+x = c(1,4,7)
+x[]
+y = list(1,4,7)
+str(y[])
+```
+
+## Vectors - Zero
+
+Returns an empty vector of the same type as the vector being subseted.
+
+```{r}
+x = c(1,4,7)
+x[0]
+y = list(1,4,7)
+str(y[0])
+```
+
+## Vectors - Character Values {.smaller}
+
+If the vector has names, select elements whose names correspond to the character vector.
+
+<div class="columns-2">
+```{r}
+x = c(a=1,b=4,c=7)
+x["a"]
+x[c("b","c")]
+```
+
+<br/>
+
+```{r}
+y = list(a=1,b=4,c=7)
+str(y["a"])
+str(y[c("b","c")])
+```
+</div>
+
+## Vectors - Out of bound subsetting {.smaller}
+
+
+<div class="columns-2">
+```{r}
+x = c(1,4,7)
+x[4]
+x["a"]
+x[c(1,4)]
+```
+
+<br/><br/>
+
+```{r}
+y = list(1,4,7)
+str(y[4])
+str(y["a"])
+str(y[c(1,4)])
+```
+</div>
+
+## Vectors - Missing and NULL
+
+<div class="columns-2">
+```{r}
+x = c(1,4,7)
+x[NA]
+x[NULL]
+x[c(1,NA)]
+```
+
+<br/><br/>
+
+```{r}
+y = list(1,4,7)
+str(y[NA])
+str(y[NULL])
+str(y[c(1,NA)])
+```
+</div>
+
+## Vectors - [ vs. [[ {.smaller}
+
+`[[` subsets like `[` except it only subsets a single value. Note that for lists the returned value may not be a list (more on this later).
+
+```{r, error=TRUE}
+x = c(1,4,7)
+x[[1]]
+y = list(1,4,7)
+y[2]
+y[[2]]
+```
+
+
+## Hadley's Analogy {.smaller}
+
+<img src="imgs/pepper_subset.png" align='center' width='90%'>
+
+
+
+## Vectors - [[ vs. $ {.smaller}
+
+`$` is equivalent to `[[` for character subsetting of *lists*, by default it uses partial matching (`exact=FALSE`).
+
+```{r, error=TRUE}
+x = c("abc"=1, "def"=5)
+x$abc
+y = list("abc"=1, "def"=5)
+y$abc
+y$d
+```
+
+## Logical operators and comparisons
+  op        Vectorized                   Comp        Vectorized
+---------- ----------------- --------- ------------ ---------------
+  x | y     True                         x < y        True
+  x & y     True                         x > y        True
+   !x       True                         x <= y       True
+  x || y    False                        x >= y       True
+  x && y    False                        x != y       True
+ xor(x,y)   True                         x == y       True
+                                         x %in% y     True (for x)
+
+
+## Exercise 1 {.smaller}
+
+Below are 100 values,
+
+```{r}
+x = c(56, 3, 17, 2, 4, 9, 6, 5, 19, 5, 2, 3, 5, 0, 13, 12, 6, 31, 10, 21, 8, 4, 1, 1, 2, 5, 16, 1, 3, 8, 1,
+      3, 4, 8, 5, 2, 8, 6, 18, 40, 10, 20, 1, 27, 2, 11, 14, 5, 7, 0, 3, 0, 7, 0, 8, 10, 10, 12, 8, 82,
+      21, 3, 34, 55, 18, 2, 9, 29, 1, 4, 7, 14, 7, 1, 2, 7, 4, 74, 5, 0, 3, 13, 2, 8, 1, 6, 13, 7, 1, 10,
+      5, 2, 4, 4, 14, 15, 4, 17, 1, 9)
+```
+
+write down how you would create a subset to accomplish each of the following:
+
+* Select every third value starting at position 2 in `x`.
+
+* Remove all values with an odd index (e.g. 1, 3, etc.)
+
+* Select only the values that are primes. (You may assume all values are less than 100)
+
+* Remove every 4th value, but only if it is odd.
+
+
+
+
+# Matrices, Data Frames, and Arrays
+
+## Matrices and Arrays {.smaller}
+
+Atomic vectors can be treated as multidimensional (2 or more) objects by adding a `dim` attribute.
+
+```{r}
+x = 1:8
+dim(x) = c(2,4)
+x
+matrix(1:8, nrow=2, ncol=4)
+```
+
+##
+
+<div class="columns-2">
+```{r}
+x = 1:8
+attr(x,"dim") = c(2,2,2)
+x
+```
+
+```{r}
+x = array(1:8,c(2,2,2))
+x
+```
+</div>
+
+## Naming dimensions {.smaller}
+
+```{r}
+x = array(1:8,c(2,2,2))
+rownames(x) = LETTERS[1:2]
+colnames(x) = LETTERS[3:4]
+dimnames(x)[[3]] = LETTERS[5:6]
+x
+```
+
+##
+
+```{r}
+str(x)
+```
+
+## Subsetting Matrices {.smaller}
+
+```{r}
+(x = matrix(1:6, nrow=2, ncol=3, dimnames=list(c("A","B"),c("M","N","O"))))
+```
+
+<div class="columns-2">
+```{r}
+x[1,3]
+x[1:2, 1:2]
+x[, 1:2]
+x[-1,-3]
+```
+</div>
+
+##  {.smaller}
+
+<div class="columns-2">
+
+```{r, error=TRUE}
+x["A","M"]
+x["A", c("M","O")]
+x[, "C"]
+x[1,"M"]
+x["B",]
+x["B"]
+x[-1]
+```
+</div>
+
+## Preserving Subsetting {.smaller}
+
+By default R's `[` subset operator is preserving subset operator, in that the returned object will have the same type as the parent. Confusingly, when used with a matrix or array `[` becomes a simplifying operator (does not preserve type) - this behavior can be controlled by the `drop` argument.
+
+```{r}
+x = matrix(1:6, nrow=2, ncol=3, dimnames=list(c("A","B"),c("M","N","O")))
+x[1, ]
+x[1, , drop=TRUE]
+x[1, , drop=FALSE]
+```
+
+## Preserving vs Simplifying Subsets
+
+                 Simplifying               Preserving
+-------------- ------------------------- -------------------------------------------------------
+Vector           `x[[1]]`                  `x[1]`
+List             `x[[1]]`                  `x[1]`
+Array            `x[1, ]` <br/> `x[, 1]`   `x[1, , drop = FALSE]` <br/> `x[, 1, drop = FALSE]`
+Factor           `x[1:4, drop = TRUE]`     `x[1:4]`
+Data frame       `x[, 1]` <br/> `x[[1]]`   `x[, 1, drop = FALSE]` <br/> `x[1]`
+
+## Hadley's Analogy {.smaller}
+
+<img src="imgs/pepper_subset.png" align='center' width='90%'>
+
+
+## Factor Subsetting
+
+```{r}
+(x = factor(c("BS", "MS", "PhD", "MS")))
+x[1:2]
+x[1:2, drop=TRUE]
+```
+
+## Data Frame Subsetting {.smaller}
+
+If provided with a single value, data frames assume you want to subset a column or columns - multiple values then the data frame is treated as a matrix.
+
+```{r}
+df = data.frame(a = 1:2, b = 3:4)
+df[1]
+df[[1]]
+df[, "a"]
+```
+## {.smaller}
+
+```{r}
+df["a"]
+df[, "a", drop = FALSE]
+df[1,]
+df[c("a","b","a")]
+
+```
+
+# Subsetting and assignment
+
+## Subsetting and assignment {.smaller}
+
+Subsets can also be used with assignment to update specific values within an object.
+
+```{r}
+x = c(1, 4, 7)
+```
+
+```{r}
+x[2] = 2
+x
+x[x %% 2 != 0] = x[x %% 2 != 0] + 1
+x
+x[c(1,1)] = c(2,3)
+x
+```
+
+##
+
+```{r}
+x = 1:6
+```
+
+<div class="columns-2">
+```{r, error=TRUE}
+x[c(2,NA)] = 1
+x
+x[c(TRUE,NA)] = 1
+x
+x[c(-1,-3)] = 3
+x
+x[] = 6:1
+x
+```
+</div>
+
+## Deleting list (df) elements
+
+```{r}
+df = data.frame(a = 1:2, b = TRUE, c = c("A", "B"))
+```
+
+```{r}
+df[["b"]] = NULL
+str(df)
+```
+
+```{r}
+df[,"c"] = NULL
+str(df)
+```
+
+## Subsets of Subsets
+
+```{r}
+df = data.frame(a = c(5,1,NA,3))
+```
+
+```{r}
+df$a[df$a == 5] = 0
+df[["a"]][df[["a"]] == 1] = 0
+df[1][df[1] == 3] = 0
+```
+
+```{r}
+df
+```
+
+## Exercise 2 {.smaller}
+
+```{r}
+grades = data.frame(
+            student = c("Alice","Bob","Carol","Dan","Eve","Frank",
+                        "Mallory","Oscar","Peggy","Sam","Wendy"),
+            grade   = c(82, 78, 62, 98, 64, 53, 86, 73, 54, 57, 61),
+            year    = c(3L, 2L, 2L, 1L, 3L, 3L, 4L, 3L, 2L, 2L, 1L),
+            stringsAsFactors = FALSE
+         )
+```
+
+For the above data frame use subsetting and subsetting assignment to add two new features (columns) to the data set:
+
+ * the student's letter grade (factor vector with labels A - F)
+    * **A** (90-100), **B** (80-89), **C** (80-89), **D** (70-79), **F** (0-69)
+
+ * the student's passing status the class (logical vector)
+    * TRUE for a grade of A, B, or C
+    * FALSE for a grade of D or F
+
+These changes should not be hard coded - if I gave you a new data frame your code should still produce the correct answer. Hint - `cbind` or `rbind` may prove useful.
+
+# Acknowledgments
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* Hadley Wickham - [Advanced R](http://adv-r.had.co.nz/)
+* [R Language Definition](http://stat.ethz.ch/R-manual/R-devel/doc/manual/R-lang.html)
