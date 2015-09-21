@@ -458,7 +458,7 @@ grades = data.frame(
 For the above data frame use subsetting and subsetting assignment to add two new features (columns) to the data set:
 
  * the student's letter grade (factor vector with labels A - F)
-    * **A** (90-100), **B** (80-89), **C** (80-89), **D** (70-79), **F** (0-69)
+    * **A** (90-100), **B** (80-89), **C** (70-79), **D** (60-69), **F** (0-5w9)
 
  * the student's passing status the class (logical vector)
     * TRUE for a grade of A, B, or C
