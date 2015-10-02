@@ -1,0 +1,8 @@
+---
+layout: page
+title: Introduction to make
+reading: "<a href='http://kbroman.org/minimal_make/'>minimal make</a>, <a href='http://bost.ocks.org/mike/make/'>Why use make</a>"
+notes: ""
+slides: false
+link: false
+---
