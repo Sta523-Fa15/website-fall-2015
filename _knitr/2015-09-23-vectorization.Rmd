@@ -1,0 +1,217 @@
+---
+layout: page
+title: Vectorization & Recursion
+reading: ""
+notes: ""
+output:
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+```{r, echo=FALSE}
+options(width = 110)
+library(microbenchmark)
+```
+
+
+# Vectorization
+
+## Dot product example
+
+```{r}
+dot1 = function(x,y) {
+  x %*% y
+}
+
+dot2 = function(x,y) {
+  sum(x * y)
+}
+
+dot3 = function(x,y) {
+  sum = 0
+  for(i in 1:length(x))
+    sum = sum + x[i] * y[i]
+
+  return(sum)
+}
+```
+
+## Dot product benchmark
+
+```{r}
+x = rnorm(1e5)
+y = runif(1e5)
+
+microbenchmark(dot1(x,y),
+               dot2(x,y),
+               dot3(x,y),
+               times=100)
+```
+
+
+## Sampling Example {.smaller}
+
+Lets consider a function to generate samples from a bivariate normal.
+
+<br/>
+
+We want to sample `x` and `y` such that
+
+$$
+\left(
+\begin{array}{c}
+x\\y
+\end{array}
+\right) \sim N
+\left(
+\left(
+\begin{array}{c}
+\mu_x\\\mu_y
+\end{array}
+\right)
+,
+\left(
+\begin{array}{cc}
+\sigma_x^2 & \rho \sigma_x\sigma_y\\
+\rho \sigma_x\sigma_y & \sigma_y^2
+\end{array}
+\right)
+\right)
+$$
+
+<br/>
+we can accomplish this by sampling `x` and `y` separately from
+
+<br/>
+
+$$
+\begin{aligned}
+x &\;\sim N(\mu_x, \sigma_x^2) \\
+y\,|\,x &\;\sim N\left(\mu_y + \frac{\sigma_y}{\sigma_x}\rho(x-\mu_x), (1-\rho^2)\sigma_y^2\right)
+\end{aligned}
+$$
+
+respectively.
+
+## Nonvectorized rbinorm {.smaller}
+
+```{r}
+rbinorm = function(n, mu=c(0,0), sigma=c(1,1), rho=0)
+{
+  res = matrix(NA, ncol=2, nrow=n)
+  colnames(res) = c("x","y")
+  for(i in 1:n)
+  {
+    x = rnorm(1, mu[1], sigma[1])
+    y = rnorm(1, mu[2] + (sigma[2]/sigma[1]) * rho * (x - mu[1]), sqrt(1-rho^2) * sigma[2])
+
+    res[i,] = c(x,y)
+  }
+
+  return(res)
+}
+```
+
+## Vectorized rbinorm {.smaller}  
+
+```{r}
+rbinorm_vec = function(n, mu=c(0,0), sigma=c(1,1), rho=0)
+{
+  x = rnorm(n, mu[1], sigma[1])
+  y = rnorm(n, mu[2] + (sigma[2]/sigma[1]) * rho * (x - mu[1]), sqrt(1-rho^2) * sigma[2])
+
+  return(cbind(x,y))
+}
+```
+
+## Output {.smaller}
+
+```{r, fig.width=8, fig.height=4}
+par(mfrow=c(1,2), mar=c(4,4,1,1))
+plot(rbinorm(1e5,rho=0.7),pch=16,cex=0.2,col=adjustcolor("black",alpha=0.1))
+plot(rbinorm_vec(1e5,rho=0.7),pch=16,cex=0.2,col=adjustcolor("black",alpha=0.1))
+```
+
+## Benchmarking
+
+```{r}
+print(microbenchmark(rbinorm(1e5,rho=0.7),rbinorm_vec(1e5,rho=0.7), times=10))
+```
+
+## GCD - Non-vectorized {.smaller}
+
+```{r}
+gcd = function(loc1, loc2) {
+  deg2rad = function(deg) return(deg*pi/180)
+
+  y1 = deg2rad( loc1[2] )
+  y2 = deg2rad( loc2[2] )
+  x1 = deg2rad( loc1[1] )
+  x2 = deg2rad( loc2[1] )
+
+  R = 6371 # Earth mean radius in km
+
+  d = sin(y1)*sin(y2) + cos(y1)*cos(y2) * cos(x2-x1)
+  if(d > 1 | d < -1) d = 0
+  else d = acos(d) * R
+
+  return(d) # distance in km
+}
+
+gcds = function(l1, l2=l1) {
+  d = matrix(NA, nrow=nrow(l1), ncol=nrow(l2))
+
+  for(i in 1:nrow(l1)) {
+    for(j in 1:nrow(l2)) {
+      d[i,j] = gcd(l1[i,],l2[j,])
+    }
+  }
+
+  return(d)
+}
+```
+
+## GCD - Vectorized {.smaller}
+
+```{r}
+gcd_vec = function(loc1, loc2)
+{
+  loc1 = matrix(loc1*pi/180,ncol=2)
+  loc2 = matrix(loc2*pi/180,ncol=2)
+
+  R = 6371 # Earth mean radius in km
+
+  d = sin(loc1[,2])*sin(loc2[,2]) + cos(loc1[,2])*cos(loc2[,2]) * cos(loc2[,1]-loc1[,1])
+  s = d > 1 | d < -1
+  d[s] = 0
+  d[!s] = acos(d[!s]) * R
+
+  return(d) # distance in km
+}
+
+gcds_vec = function(l1, l2=l1)
+{
+  return( apply(l2, 1, function(x) gcd_vec(l1,x)) )
+}
+
+```
+
+## Performance
+
+
+```{r}
+n = 200
+locs = cbind(x = runif(n,-180,180), y = runif(n,-90,90))
+
+microbenchmark(gcds(locs),
+               gcds_vec(locs),
+               times=10)
+
+sum(abs(gcds(locs)-gcds_vec(locs)))
+```
+
+# Recursion 
+
+## Live Demo-
