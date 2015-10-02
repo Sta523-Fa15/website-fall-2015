@@ -1,0 +1,148 @@
+---
+layout: page
+title: Web Scraping
+reading: "<a href='https://cran.r-project.org/web/packages/rvest/vignettes/selectorgadget.html'>rvest and Selectorgadget</a>"
+notes: "<a href='hw/hw2.html'>Homework 2</a> - due Sat 10/10 by 2 pm"
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: true
+link: true
+---
+
+```{r echo=FALSE}
+library(magrittr)
+```
+
+# Pipes
+
+## magrittr {.smaller}
+
+<div class="centered">
+<div style="margin-top: -50px;">
+<img src="imgs/magritte.jpg" height="175px" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="imgs/magrittr.jpeg" height="175px" />
+</div>
+</div>
+
+You can think about the following sequence of actions - find key, unlock car, start car, drive to school, park.
+
+Expressed as a set of nested functions in R pseudocode this would look like:
+
+```{r eval=FALSE}
+park(drive(start_car(find("keys")), to="campus"))
+```
+
+Writing it out using pipes give it a more natural (and easier to read) structure:
+
+```{r eval=FALSE}
+find("keys") %>%
+    start_car() %>%
+    drive(to="campus") %>%
+    park()
+```
+
+## Approaches {.smaller}
+
+All of the following are find, it mostly amounts to preference.
+
+
+Nested:
+
+```{r, eval=FALSE}
+h( g( f(x), y=1), z=1 )
+```
+
+Piped:
+
+```{r, eval=FALSE}
+f(x) %>% g(y=1) %>% h(z=1)
+```
+
+Intermediate:
+```{r, eval=FALSE}
+res = f(x)
+res = g(res, y=1)
+res = h(res, z=1)
+```
+
+## What about other arguments? {.smaller}
+
+Sometimes we want to send our results to an function argument other than first one or we want to use the previous result for multiple arguments. In these cases we can refer to the previous result using `.`.
+
+```{r}
+data.frame(a=1:3,b=3:1) %>% lm(a~b,data=.)
+data.frame(a=1:3,b=3:1) %>% .[[1]]
+data.frame(a=1:3,b=3:1) %>% .[[length(.)]]
+```
+
+
+
+# Web Scraping with rvest
+
+## Hypertext Markup Language
+
+Most of the data on the web is still largely available as HTML - while it is structured (hierarchical / tree based) it often is not available in a form useful for analysis (flat / tidy).
+
+```html
+<html>
+  <head>
+    <title>This is a title</title>
+  </head>
+  <body>
+    <p align="center">Hello world!</p>
+  </body>
+</html>
+```
+
+## rvest {.smaller}
+
+`rvest` is a package from Hadley Wickham that makes basic processing and manipulation of HTML data straight forward.
+
+<br/>
+
+Core functions:
+
+* `read_html` - read HTML data from a url or character string.
+
+* `html_nodes` - select specified nodes from the HTML document usign CSS selectors.
+
+* `html_table` - parse an HTML table into a data frame.
+
+* `html_text` - extract a tag pairs' content.
+
+* `html_name` - extract tags' names.
+
+* `html_attrs` - extract all of each tag's attributes.
+
+* `html_attr` - extract tags' attribute value by name.
+
+
+## Live Demo
+
+<br/><br/><br/><br/>
+
+<div class="centered">
+<div style="font-size:175%">
+... because `rmarkdown` has decided it hates <br/> both me and `rvest` ...
+</div>
+</div>
+
+## Exercise
+
+Find the url of the posters for the *first five* movies in the opening this week list on `imdb.com`.
+
+This will involve multiple steps:
+
+* Using the main imdb page find the url for the first five movies in the opening this week list.
+
+* Examine each of those subpages to find the poster urls. Hint - the same approach should work for all five pages since imdb's movie pages all have the same structure.
+
+<br/>
+
+<div class="centered">
+<div style="font-size:125%">
+The only hard coded url you should be using is `imdb.com`.
+</div>
+</div>

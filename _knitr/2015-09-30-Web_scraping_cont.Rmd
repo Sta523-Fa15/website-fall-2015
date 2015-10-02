@@ -1,0 +1,9 @@
+---
+layout: page
+title: Web Scraping (cont.)
+reading: ""
+notes: "Screencast - <a href='https://www.youtube.com/watch?v=stZf4b17xiE&list=PLFC0tbdcUnf6o6yVtBc6MF5IDyEYh8p8Y&index=3'>Scraping APIs</a>, <a href='https://github.com/Sta523-Fa15/TeamExample_hw2'>Code</a>"
+slides: false
+link: false
+---
+
