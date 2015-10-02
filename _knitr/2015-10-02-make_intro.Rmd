@@ -3,6 +3,165 @@ layout: page
 title: Introduction to make
 reading: "<a href='http://kbroman.org/minimal_make/'>minimal make</a>, <a href='http://bost.ocks.org/mike/make/'>Why use make</a>"
 notes: ""
-slides: false
-link: false
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: true
+link: true
 ---
+
+# make
+
+## make
+
+* Automatically builds software / libraries / documents by specifying dependencies through a Make file
+
+* Originally created by Stuart Feldman in 1976 at Bell Labs
+
+* Almost univerally available (all flavors of unix / linux/ osx)
+
+## Makefile
+
+A `Makefile` provides a list of target files along with their dependencies and the steps necessary to generate each of the targets.
+
+```make
+target: depend1 depend2 depend3 ...
+    step1
+    step2
+    step3
+    ...
+```
+
+## Makefile (simple example)
+
+```make
+paper.pdf: paper.tex Figs/fig1.pdf Figs/fig2.pdf
+    pdflatex paper
+
+Figs/fig1.pdf: R/fig1.R
+    cd R;Rscript fig1.R
+
+Figs/fig2.pdf: R/fig2.R
+    cd R;Rscript fig2.R
+```
+
+## Intelligent Building
+
+Because the `Makefile` specifies the dependency structure `make` knows when a file has changed (by examining the file's modification timestamp) and only runs the steps that depend on the file or files that have changed.
+
+<br/>
+
+* After running `make` the first time, I edit `paper.tex`, what steps run if I run `make` again?
+
+* What about editing `fig1.R`?
+
+
+## Variables
+
+Like R or shell scripts or almost any other language we can define variables
+
+```make
+R_OPTS=--no-save --no-restore --no-site-file --no-init-file --no-environ
+
+Figs/fig1.pdf: R/fig1.R
+    cd R;Rscript $(R_OPTS) fig1.R
+```
+
+## Special Targets {.smaller}
+
+By default is you run `make` with arguments it will attempt to build the first target in the `Makefile` whose name does not start with a `.`. By convention we often include an `all` target which specifies how to build everything within a project.
+
+<br/>
+
+`all` is an example of what is called a phony target - because there is no `all` file in the directory. Other common phony targets:
+
+* clean - remove any files created by the Makefile, restores to the original state
+
+* install - for software package, installs the compiled / built programs
+
+<br/>
+
+
+We list all phony targets by including the line like the following:
+
+```make
+.PHONY: all clean all
+```
+
+
+## Builtin Variables
+
+* `$@` &nbsp;&nbsp; the file name of the target
+
+* `$<` &nbsp;&nbsp; the name of the first dependency
+
+* `$^` &nbsp;&nbsp; the names of all dependencies
+
+* `$(@D)` &nbsp;&nbsp; the directory part of the target
+
+* `$(@F)` &nbsp;&nbsp; the file part of the target
+
+* `$(<D)` &nbsp;&nbsp; the directory part of the first dependency
+
+* `$(<F)` &nbsp;&nbsp; the file part of the first dependency
+
+
+## Pattern Rules
+
+Often we want to build several files in the same way, in these cases we can use `%` as a special wildcard character to match both targets and dependencies.
+
+So we can go from
+
+```make
+Figs/fig1.pdf: R/fig1.R
+    cd R;Rscript fig1.R
+
+Figs/fig2.pdf: R/fig2.R
+    cd R;Rscript fig2.R
+```
+
+to
+
+```make
+Figs/%.pdf: R/%.R
+    cd $(<D);Rscript $(<F)
+```
+
+## Makefile (fancy example)
+
+```make
+all: paper.pdf
+
+paper.pdf: paper.tex Figs/Fig1.pdf Figs/Fig2.pdf
+    pdflatex paper
+
+Figs/%.pdf: R/%.R
+    cd $(<D);Rscript $(<F)
+
+clean:
+    rm -f paper.aux
+    rm -f paper.log
+    rm -f paper.pdf
+    rm -f Figs/*.pdf
+
+.PHONY: all clean
+```
+
+
+## HW2's Makefile
+
+<br/><br/><br/><br/>
+
+<div class="centered">
+<div style="font-size:175%">
+Live Demo
+</div>
+</div>
+
+
+# Acknowledgments
+## Acknowledgments
+
+Above materials are derived from the following sources:
+
+* Karl Broman - [minimal make](http://kbroman.org/minimal_make/)
