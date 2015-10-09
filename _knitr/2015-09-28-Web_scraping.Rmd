@@ -2,7 +2,7 @@
 layout: page
 title: Web Scraping
 reading: "<a href='https://cran.r-project.org/web/packages/rvest/vignettes/selectorgadget.html'>rvest and Selectorgadget</a>"
-notes: "<a href='hw/hw2.html'>Homework 2</a> - due Sat 10/10 by 2 pm"
+notes: "<a href='hw/hw2.html'>Homework 2</a> - due Wed 10/14 by 12 am"
 output: 
     ioslides_presentation:
         widescreen: true

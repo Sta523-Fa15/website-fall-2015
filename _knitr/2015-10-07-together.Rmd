@@ -1,0 +1,8 @@
+---
+layout: page
+title: Putting it together
+reading: ""
+notes: "Screencast - <a href='https://youtu.be/jcnedleqHRM'>Scraping IMDB</a>"
+slides: false
+link: false
+---

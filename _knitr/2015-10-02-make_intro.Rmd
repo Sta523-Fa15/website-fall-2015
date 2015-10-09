@@ -2,7 +2,7 @@
 layout: page
 title: Introduction to make
 reading: "<a href='http://kbroman.org/minimal_make/'>minimal make</a>, <a href='http://bost.ocks.org/mike/make/'>Why use make</a>"
-notes: ""
+notes: "Screencast - <a href='https://youtu.be/Y8lpp6yXIwU'>HW2 Makefile</a>"
 output: 
     ioslides_presentation:
         widescreen: true

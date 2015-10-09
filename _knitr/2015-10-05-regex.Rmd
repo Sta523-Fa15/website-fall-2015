@@ -1,9 +1,211 @@
 ---
 layout: page
-title: Introduction to Regular Expressions
-reading: "
-"
-notes: ""
-slides: false
-link: false
+title: Regular expressions and stringr
+reading: "<a href='http://www.cheatography.com/davechild/cheat-sheets/regular-expressions/'>RegEx Cheat Sheet</a> and <a href='https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html'>stringr</a>"
+notes: "<a href='http://regexr.com/'>Testing RegExs</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: true
+link: true
 ---
+
+```{r echo=FALSE}
+suppressMessages(library(stringr))
+```
+
+# stringr
+
+## stringr {.smaller}
+
+stringr is a string handling package written by Hadley Wickham that is designed to improve / simplify string handling in R. 
+
+|     | |
+|-----|-|
+|`str_detect(string, pattern)`| Detect the presence or absence of a pattern in a string. |
+|`str_locate(string, pattern)`| Locate the first position of a pattern and return a matrix with start and end. |
+|`str_extract(string, pattern)`| Extracts text corresponding to the first match. |
+|`str_match(string, pattern)`| Extracts capture groups formed by `()` from the first match. |
+|`str_split(string, pattern)`| Splits string into pieces and returns a list of character vectors. |
+|`str_replace(string, pattern, replacement)`| Replaces the first matched pattern and returns a character vector. |
+
+<br/>
+
+Many of these functions have variants with an `_all` suffix which will match more than one occurrence of the pattern in a given string.
+
+
+# Regular Expressions
+
+## Simple Matching
+
+```{r}
+text = c("The","quick","brown","fox","jumps","over","the","lazy","dog")
+```
+
+```{r}
+str_detect(text,"quick")
+str_detect(text,"o")
+str_detect(text,"row")
+```
+
+## Metacharacters {.smaller}
+
+The power of regular expressions comes from the ability to use a number of special metacharacters that modify how the pattern matching is performed.
+
+```regex
+. ^ $ * + ? { } [ ] \ | ( )
+```
+
+Because of their special properties they cannot be matched directly, if you need to match one of them you need to escape it first (precede it by `\`). One problem is that 
+
+```{r error=TRUE}
+str_detect("abc[def","[")
+str_detect("abc[def","\\[")
+```
+
+Note we actually need to prefix `[` with `\\` because `\` is also a escape character for normal strings.
+
+
+## Anchors
+
+|      | |
+|------|-|
+| `^` or `\A` | Start of string   |
+| `$` or `\Z` | End of string     |
+| `\b`        | Word boundary     |  
+| `\B`        | Not word boundary |
+
+## Anchor Examples {.smaller}
+
+```{r}
+text = "The quick brown fox jumps over the lazy dog"
+```
+<div class="columns-2">
+```{r}
+str_replace(text,"^The","-")
+str_replace(text,"^dog","-")
+str_replace(text,"The$","-")
+str_replace(text,"dog$","-")
+str_replace(text,"\\AThe","-")
+str_replace(text,"dog\\Z","-")
+str_replace(text,"\\bbrown\\b","-")
+str_replace(text,"\\Brow\\B","-")
+```
+</div>
+
+
+## Character Classes
+
+|      | |
+|------|-|
+| `\s` | White space |
+| `\S` | Not white space |
+| `\d` | Digit (0-9)|
+| `\D` | Not digit |
+| `\w` | Word (A-Z, a-z, 0-9, or _) |
+| `\W` | Not word |
+
+## Ranges
+
+|          | |
+|----------|-|
+| `.`      | Any character except new line (\n) |
+| `[abc]`  | Range (a or b or c) |
+| `[^abc]` | Not (a or b or c) |
+| `[a-q]`  | Lower case letter from a to q |
+| `[A-Q]`  | Upper case letter from A to Q |
+| `[0-7]`  | Digit from 0 to 7 |
+
+## Quantifiers
+
+Attached to literals, character classes, ranges or groups to match repeats.
+
+|         | |
+|---------|-|
+| `*`     | Match 0 or more |
+| `+`     | Match 1 or more |
+| `?`     | Match 0 or 1 |
+| `{3}`   | Match Exactly 3 |
+| `{3,}`  | Match 3 or more |
+| `{3,5}` | Match 3, 4 or 5 |
+
+## Greedy vs ungreedy matching 
+
+Add a ? to a quantifier to make it ungreedy.
+
+```{r}
+text = "<div class='main'> <div> <a href='here.pdf'>Here!</a> </div> </div>"
+```
+
+```{r}
+str_extract(text, "<div>.*</div>")
+str_extract(text, "<div>.*?</div>")
+```
+
+## Groups
+
+Group together parts of a regular expression for modification or capture.
+
+|           | |
+|-----------|-|
+| `(a|b)`   | match literal a or b, group either
+| `a(bc)?`  | match literal a or abc, group bc or ""
+| `(?:abc)` | Non-c­apt­uring group
+| `(abc)def(hig)| match abcdefhig, group abc and hig
+
+## Group Examples {.smaller}
+
+```{r}
+text = c("apple", "219 733 8965", "329-293-8753", "Work: 579-499-7527; Home: 543.355.3679")
+phone = "([2-9][0-9]{2})[- .]([0-9]{3})[- .]([0-9]{4})"
+```
+
+```{r}
+str_extract(text, phone)
+str_extract_all(text, phone)
+```
+## Matching {.smaller}
+
+```{r}
+str_match(text, phone)
+str_match_all(text, phone)
+```
+
+## Exercise {.smaller}
+
+Write one or more regular expressions to extract the data contained in the xml file below:
+
+```xml
+<breakfast_menu>
+  <food>
+    <name>Belgian Waffles</name>
+    <price>$5.95</price>
+    <calories>650</calories>
+    <addon>
+        <name>Strawberries</name>
+        <price>$2.00</price>
+        <calories>250</calories>
+    </addon>
+  </food>
+  <food>
+    <name>French Toast</name>
+    <price>$4.50</price>
+    <calories>600</calories>
+    <addon>
+        <name>Strawberries</name>
+        <price>$2.00</price>
+        <calories>250</calories>
+    </addon>
+  </food>
+</breakfast_menu>
+```
+
+# Acknowledgments
+
+## Acknowledgments
+
+* Hadley Wickham - [stringr vigneete](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html)
+
+* David Child - [RegEx Cheat Sheet](http://www.cheatography.com/davechild/cheat-sheets/regular-expressions/)
+
+* [Regular-Expression.info](http://www.regular-expressions.info/)
