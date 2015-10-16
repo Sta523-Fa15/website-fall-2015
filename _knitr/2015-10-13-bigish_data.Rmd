@@ -1,0 +1,735 @@
+---
+layout: page
+title: Bigish data
+reading: ""
+notes: "<a href='hw/hw3.html'>Homework 3</a> - due Sat 10/31 by 2 pm <br/> Screencast - <a href='https://youtu.be/a8n4bE6U9OY'>dplyr</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+```{r, echo=FALSE}
+options(width = 110)
+```
+
+# Background
+
+## Big vs Bigish data
+
+* We are working with data that is large, but will still fit in memory. 
+
+* R *loves* to make extra copies of objects, so we need to be careful - even a handful of copies with exhaust the memory on most systems. 
+    
+    * Less of an issue on saxon (256 GB of Ram), but this is a shared resource - use too much and your session will be killed.
+
+* In general you should prefer:
+
+<div class="centered">
+<br/>
+*subsetting/base/Packages >>> apply > loops*
+
+<br/>
+*built-in/base/Packages > user defined functions*
+</div>
+
+# Reading
+
+## Reading nyc_311.csv
+
+If we use the basic approach of `read.csv`, we end up waiting a really long time,
+
+```{r, eval=FALSE}
+system.time(read.csv("/home/vis/cr173/Sta523/data/nyc/nyc_311.csv"))
+
+##    user  system elapsed 
+## 706.602  27.680 743.568
+```
+
+Over 12 minutes to read in a 5.1 gigabyte CSV file.
+
+## Improvements 
+
+If we use `stringsAsFactors` and `comment.char` arguments we can speed things up a bit.
+
+```{r, eval=FALSE}
+system.time(read.csv("/home/vis/cr173/Sta523/data/nyc/nyc_311.csv", 
+                     stringsAsFactors=FALSE, 
+                     comment.char="")
+           )
+
+##    user  system elapsed 
+## 305.743   7.003 312.758 
+```
+
+## Alternatives - readr {.smaller}
+
+```{r, eval=FALSE}
+library(readr)
+system.time(read_csv("/home/vis/cr173/Sta523/data/nyc/nyc_311.csv"))
+
+## |================================================================================| 100% 6054 MB
+##    user  system elapsed 
+## 207.472   4.583 211.335 
+## Warning message:
+## 206247 problems parsing '/home/vis/cr173/Sta523/data/nyc/nyc_311_R.csv'. See problems(...) for more details. 
+
+str(problems(nyc))
+
+## Classes ‘tbl_df’, ‘tbl’ and 'data.frame':    206247 obs. of  4 variables:
+##  $ row     : int  102 102 102 102 257 264 264 643 893 902 ...
+##  $ col     : int  42 43 44 45 45 47 48 40 45 42 ...
+##  $ expected: chr  "T/F/TRUE/FALSE" "T/F/TRUE/FALSE" "T/F/TRUE/FALSE" "T/F/TRUE/FALSE" ...
+##  $ actual  : chr  "BQE/Gowanus Expwy" "West/Staten Island Bound" "Roadway" "86th St (Exit 19) - 92nd St (Exit 17)" ...
+```
+
+
+## Improvement - data.table
+
+```{r, eval=FALSE}
+library(data.table)
+system.time(nyc <- fread("/home/vis/cr173/Sta523/data/nyc/nyc_311.csv"))
+
+## Read 10018809 rows and 48 (of 48) columns from 5.913 GB file in 00:01:07
+##    user  system elapsed 
+##  65.439   1.791  67.119 
+
+class(nyc)
+
+## "data.table" "data.frame"
+
+nyc = as.data.frame(nyc)
+class(nyc)
+
+## [1] "data.frame"
+```
+
+## Structure {.smaller}
+
+```{r, eval=FALSE}
+str(nyc)
+
+## Classes ‘data.table’ and 'data.frame':  10018809 obs. of  48 variables:
+##  $ Unique.Key                    : int  31684123 31683037 31682998 31682990 31688533 31686111 31687396 31687311 31690976 31686103 ...
+##  $ Created.Date                  : chr  "10/06/2015 02:13:38 AM" "10/06/2015 02:11:28 AM" "10/06/2015 02:08:09 AM" "10/06/2015 02:03:54 AM" ...
+##  $ Closed.Date                   : chr  "10/06/2015 07:12:35 AM" "10/06/2015 03:17:00 AM" "" "" ...
+##  $ Agency                        : chr  "DOF" "NYPD" "DOHMH" "DOHMH" ...
+##  $ Agency.Name                   : chr  "Department of Finance" "New York City Police Department" "Department of Health and Mental Hygiene" "Department of Health and Mental Hygiene" ...
+##  $ Complaint.Type                : chr  "DOF Literature Request" "Noise - Vehicle" "Rodent" "Rodent" ...
+##  $ Descriptor                    : chr  "DRIE - Adjustment to Abatement Application Form - Tenant" "Car/Truck Music" "Rat Sighting" "Rat Sighting" ...
+##  $ Location.Type                 : chr  "" "Street/Sidewalk" "Catch Basin/Sewer" "Other (Explain Below)" ...
+##  $ Incident.Zip                  : chr  "" "10033" "10009" "10010" ...
+##  $ Incident.Address              : chr  "" "206 AUDOBON AVENUE" "" "230 EAST 21ST STREET" ...
+##  $ Street.Name                   : chr  "" "AUDOBON AVENUE" "" "EAST 21ST STREET" ...
+##  $ Cross.Street.1                : chr  "" "WEST 175 STREET" "" "" ...
+##  $ Cross.Street.2                : chr  "" "WEST 176 STREET" "" "" ...
+##  $ Intersection.Street.1         : chr  "" "" "EAST   10 STREET" "" ...
+##  $ Intersection.Street.2         : chr  "" "" "AVENUE D" "" ...
+##  $ Address.Type                  : chr  "" "ADDRESS" "INTERSECTION" "LATLONG" ...
+##  $ City                          : chr  "" "NEW YORK" "NEW YORK" "NEW YORK" ...
+##  $ Landmark                      : chr  "" "" "" "" ...
+##  $ Facility.Type                 : chr  "N/A" "Precinct" "N/A" "N/A" ...
+##  $ Status                        : chr  "Closed" "Closed" "Pending" "Pending" ...
+##  $ Due.Date                      : chr  "10/13/2015 07:11:15 AM" "10/06/2015 10:11:28 AM" "11/05/2015 02:08:09 AM" "11/05/2015 02:03:54 AM" ...
+##  $ Resolution.Description        : chr  "The literature you requested has been mailed to you. Please allow additional time for delivery." "The Police Department responded to the complaint and with the information available observed no evidence of the violation at th"| __truncated__ "The Department of Health and Mental Hygiene will review your complaint to determine appropriate action.  Complaints of this typ"| __truncated__ "The Department of Health and Mental Hygiene will review your complaint to determine appropriate action.  Complaints of this typ"| __truncated__ ...
+##  $ Resolution.Action.Updated.Date: chr  "10/06/2015 07:12:35 AM" "10/06/2015 03:17:00 AM" "10/06/2015 02:19:16 AM" "10/06/2015 02:06:32 AM" ...
+##  $ Community.Board               : chr  "0 Unspecified" "12 MANHATTAN" "03 MANHATTAN" "06 MANHATTAN" ...
+##  $ Borough                       : chr  "Unspecified" "MANHATTAN" "MANHATTAN" "MANHATTAN" ...
+##  $ Park.Facility.Name            : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ Park.Borough                  : chr  "Unspecified" "MANHATTAN" "MANHATTAN" "MANHATTAN" ...
+##  $ School.Name                   : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Number                 : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Region                 : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Code                   : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Phone.Number           : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Address                : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.City                   : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.State                  : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Zip                    : chr  "Unspecified" "Unspecified" "Unspecified" "Unspecified" ...
+##  $ School.Not.Found              : chr  "N" "N" "N" "N" ...
+##  $ School.or.Citywide.Complaint  : chr  "" "" "" "" ...
+##  $ Vehicle.Type                  : chr  "" "" "" "" ...
+##  $ Taxi.Company.Borough          : chr  "" "" "" "" ...
+##  $ Taxi.Pick.Up.Location         : chr  "" "" "" "" ...
+##  $ Bridge.Highway.Name           : chr  "" "" "" "" ...
+##  $ Bridge.Highway.Direction      : chr  "" "" "" "" ...
+##  $ Road.Ramp                     : chr  "" "" "" "" ...
+##  $ Bridge.Highway.Segment        : chr  "" "" "" "" ...
+##  $ Garage.Lot.Name               : chr  "" "" "" "" ...
+##  $ Ferry.Direction               : chr  "" "" "" "" ...
+##  $ Ferry.Terminal.Name           : chr  "" "" "" "" ...
+```
+
+# dplyr
+
+## A Grammar of Data Manipulation {.smaller}
+
+dplyr is based on the concepts of functions as verbs that manipulate data frames.
+
+Single data frame functions / verbs:
+
+* `tbl_df()`: add the `tbl_df` class 
+* `filter()`: pick rows matching criteria
+* `slice()`: pick rows using index(es)
+* `select()`: pick columns by name
+* `rename()`: rename specific columns
+* `arrange()`: reorder rows
+* `mutate()`: add new variables
+* `transmute()`: create new data frame with variables
+* `distinct()`: filter for unique rows
+* `sample_n()` / `sample_frac()`: randomly sample rows
+* `summarise()`: reduce variables to values
+
+
+## dplyr function rules
+
+* First argument is a data frame
+
+* Subsequent arguments say what to do with data frame
+
+* Always return a data frame
+
+* Don't modify in place
+
+
+## Example Data
+
+We will demonstrate dplyr's functionality using the data for Homework 3.
+
+```{r, eval=FALSE}
+library(dplyr)
+library(data.table)
+
+nyc = fread("Sta523/data/nyc/nyc_311.csv") %>% tbl_df()
+```
+
+## {.smaller}
+```{r, eval=FALSE}
+nyc
+
+## Source: local data frame [10,018,809 x 48]
+## 
+##    Unique.Key           Created.Date            Closed.Date Agency                             Agency.Name
+##         (int)                  (chr)                  (chr)  (chr)                                   (chr)
+## 1    31684123 10/06/2015 02:13:38 AM 10/06/2015 07:12:35 AM    DOF                   Department of Finance
+## 2    31683037 10/06/2015 02:11:28 AM 10/06/2015 03:17:00 AM   NYPD         New York City Police Department
+## 3    31682998 10/06/2015 02:08:09 AM                         DOHMH Department of Health and Mental Hygiene
+## 4    31682990 10/06/2015 02:03:54 AM                         DOHMH Department of Health and Mental Hygiene
+## 5    31688533 10/06/2015 01:58:53 AM 10/06/2015 03:54:33 AM   NYPD         New York City Police Department
+## 6    31686111 10/06/2015 01:58:42 AM 10/06/2015 02:42:21 AM   NYPD         New York City Police Department
+## 7    31687396 10/06/2015 01:55:18 AM 10/06/2015 11:06:48 AM   NYPD         New York City Police Department
+## 8    31687311 10/06/2015 01:52:18 AM 10/06/2015 02:59:04 AM   NYPD         New York City Police Department
+## 9    31690976 10/06/2015 01:49:04 AM 10/06/2015 03:03:21 AM   NYPD         New York City Police Department
+## 10   31686103 10/06/2015 01:47:27 AM 10/06/2015 03:07:37 AM   NYPD         New York City Police Department
+## ..        ...                    ...                    ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+
+## Fixing Dates
+
+```{r, eval=FALSE}
+library(lubridate)
+class(nyc$Created.Date)
+
+## [1] "character"
+
+nyc$Created.Date = mdy_hms(nyc$Created.Date)
+class(nyc$Created.Date)
+
+## [1] "POSIXct" "POSIXt"
+```
+
+## {.smaller}
+
+```{r, eval=FALSE}
+nyc
+
+## Source: local data frame [10,018,809 x 48]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency                             Agency.Name
+##         (int)              (time)                  (chr)  (chr)                                   (chr)
+## 1    31684123 2015-10-06 02:13:38 10/06/2015 07:12:35 AM    DOF                   Department of Finance
+## 2    31683037 2015-10-06 02:11:28 10/06/2015 03:17:00 AM   NYPD         New York City Police Department
+## 3    31682998 2015-10-06 02:08:09                         DOHMH Department of Health and Mental Hygiene
+## 4    31682990 2015-10-06 02:03:54                         DOHMH Department of Health and Mental Hygiene
+## 5    31688533 2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD         New York City Police Department
+## 6    31686111 2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD         New York City Police Department
+## 7    31687396 2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD         New York City Police Department
+## 8    31687311 2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD         New York City Police Department
+## 9    31690976 2015-10-06 01:49:04 10/06/2015 03:03:21 AM   NYPD         New York City Police Department
+## 10   31686103 2015-10-06 01:47:27 10/06/2015 03:07:37 AM   NYPD         New York City Police Department
+## ..        ...                 ...                    ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+
+## filter() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% filter(Create.Date > "2014/01/01", Create.Date < "2014/12/31")
+
+## Source: local data frame [1,835,335 x 48]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency                             Agency.Name
+##         (int)              (time)                  (chr)  (chr)                                   (chr)
+## 1    29613154 2014-12-31 04:59:00 12/31/2014 06:10:00 AM    DOT            Department of Transportation
+## 2    29612271 2014-12-31 04:58:00 12/31/2014 06:10:00 AM    DOT            Department of Transportation
+## 3    29611762 2014-12-31 04:57:56 12/31/2014 07:20:47 AM   NYPD         New York City Police Department
+## 4    29607431 2014-12-31 04:56:00 12/31/2014 06:10:00 AM    DOT            Department of Transportation
+## 5    29612279 2014-12-31 04:55:00 12/31/2014 12:02:00 PM    DEP  Department of Environmental Protection
+## 6    29613108 2014-12-31 04:51:52 02/11/2015 10:30:27 AM    TLC           Taxi and Limousine Commission
+## 7    29609576 2014-12-31 04:51:38 12/31/2014 06:07:43 AM   NYPD         New York City Police Department
+## 8    29608538 2014-12-31 04:51:26 12/31/2014 06:58:06 AM   NYPD         New York City Police Department
+## 9    29611418 2014-12-31 04:51:10                         DOHMH Department of Health and Mental Hygiene
+## 10   29607397 2014-12-31 04:47:45 12/31/2014 06:21:33 AM   NYPD         New York City Police Department
+## ..        ...                 ...                    ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+## {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% filter(Agency == "NYPD" | Agency == "DOHMH")
+
+## Source: local data frame [1,508,836 x 48]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency                             Agency.Name
+##         (int)              (time)                  (chr)  (chr)                                   (chr)
+## 1    31683037 2015-10-06 02:11:28 10/06/2015 03:17:00 AM   NYPD         New York City Police Department
+## 2    31682998 2015-10-06 02:08:09                         DOHMH Department of Health and Mental Hygiene
+## 3    31682990 2015-10-06 02:03:54                         DOHMH Department of Health and Mental Hygiene
+## 4    31688533 2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD         New York City Police Department
+## 5    31686111 2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD         New York City Police Department
+## 6    31687396 2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD         New York City Police Department
+## 7    31687311 2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD         New York City Police Department
+## 8    31690976 2015-10-06 01:49:04 10/06/2015 03:03:21 AM   NYPD         New York City Police Department
+## 9    31686103 2015-10-06 01:47:27 10/06/2015 03:07:37 AM   NYPD         New York City Police Department
+## 10   31684311 2015-10-06 01:42:40                         DOHMH Department of Health and Mental Hygiene
+## ..        ...                 ...                    ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+## slice() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% slice(3:8)
+## Source: local data frame [6 x 48]
+## 
+##   Unique.Key        Created.Date            Closed.Date Agency                             Agency.Name
+##        (int)              (time)                  (chr)  (chr)                                   (chr)
+## 1   31682998 2015-10-06 02:08:09                         DOHMH Department of Health and Mental Hygiene
+## 2   31682990 2015-10-06 02:03:54                         DOHMH Department of Health and Mental Hygiene
+## 3   31688533 2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD         New York City Police Department
+## 4   31686111 2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD         New York City Police Department
+## 5   31687396 2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD         New York City Police Department
+## 6   31687311 2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD         New York City Police Department
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+## {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% slice((n()-5):n())
+
+## Source: local data frame [6 x 48]
+## 
+##   Unique.Key Created.Date            Closed.Date Agency                                        Agency.Name
+##        (int)       (time)                  (chr)  (chr)                                              (chr)
+## 1   15635468   2010-01-01 01/03/2010 12:00:00 AM    HPD Department of Housing Preservation and Development
+## 2   15635611   2010-01-01 01/04/2010 12:00:00 AM    HPD Department of Housing Preservation and Development
+## 3   15635212   2010-01-01 01/27/2010 12:00:00 AM    HPD Department of Housing Preservation and Development
+## 4   15636490   2010-01-01 01/02/2010 12:00:00 AM    HPD Department of Housing Preservation and Development
+## 5   15635445   2010-01-01 01/07/2010 12:00:00 AM    HPD Department of Housing Preservation and Development
+## 6   15635323   2010-01-01 01/05/2010 12:00:00 AM    HPD Department of Housing Preservation and Development
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+## select() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(Incident.Address, contains("Street"))
+
+## Source: local data frame [10,018,809 x 6]
+## 
+##        Incident.Address      Street.Name     Cross.Street.1  Cross.Street.2 Intersection.Street.1
+##                   (chr)            (chr)              (chr)           (chr)                 (chr)
+## 1                                                                                                
+## 2    206 AUDOBON AVENUE   AUDOBON AVENUE    WEST 175 STREET WEST 176 STREET                      
+## 3                                                                                EAST   10 STREET
+## 4  230 EAST 21ST STREET EAST 21ST STREET                                                         
+## 5       20 MARVIN PLACE     MARVIN PLACE ST RAYMONDS AVENUE        DEAD END                      
+## 6             10 AVENUE        10 AVENUE    WEST 203 STREET WEST 204 STREET                      
+## 7                                                                                EAST   21 STREET
+## 8  116 MACDOUGAL STREET MACDOUGAL STREET    BLEECKER STREET    MINETTA LANE                      
+## 9     330 ALBANY AVENUE    ALBANY AVENUE    EASTERN PARKWAY    UNION STREET                      
+## 10        3650 BROADWAY         BROADWAY    WEST 150 STREET WEST 151 STREET                      
+## ..                  ...              ...                ...             ...                   ...
+## Variables not shown: Intersection.Street.2 (chr)
+```
+
+## {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(Created.Date:Agency)
+
+## Source: local data frame [10,018,809 x 3]
+## 
+##           Created.Date            Closed.Date Agency
+##                 (time)                  (chr)  (chr)
+## 1  2015-10-06 02:13:38 10/06/2015 07:12:35 AM    DOF
+## 2  2015-10-06 02:11:28 10/06/2015 03:17:00 AM   NYPD
+## 3  2015-10-06 02:08:09                         DOHMH
+## 4  2015-10-06 02:03:54                         DOHMH
+## 5  2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD
+## 6  2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD
+## 7  2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD
+## 8  2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD
+## 9  2015-10-06 01:49:04 10/06/2015 03:03:21 AM   NYPD
+## 10 2015-10-06 01:47:27 10/06/2015 03:07:37 AM   NYPD
+## ..                 ...                    ...    ...
+```
+
+## {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(-(Park.Facility.Name:Ferry.Terminal.Name))
+
+## Source: local data frame [10,018,809 x 25]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency                             Agency.Name
+##         (int)              (time)                  (chr)  (chr)                                   (chr)
+## 1    31684123 2015-10-06 02:13:38 10/06/2015 07:12:35 AM    DOF                   Department of Finance
+## 2    31683037 2015-10-06 02:11:28 10/06/2015 03:17:00 AM   NYPD         New York City Police Department
+## 3    31682998 2015-10-06 02:08:09                         DOHMH Department of Health and Mental Hygiene
+## 4    31682990 2015-10-06 02:03:54                         DOHMH Department of Health and Mental Hygiene
+## 5    31688533 2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD         New York City Police Department
+## 6    31686111 2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD         New York City Police Department
+## 7    31687396 2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD         New York City Police Department
+## 8    31687311 2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD         New York City Police Department
+## 9    31690976 2015-10-06 01:49:04 10/06/2015 03:03:21 AM   NYPD         New York City Police Department
+## 10   31686103 2015-10-06 01:47:27 10/06/2015 03:07:37 AM   NYPD         New York City Police Department
+## ..        ...                 ...                    ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr)
+```
+
+## rename() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% rename(Updated.Date = Resolution.Action.Updated.Date) %>% select(contains("Date"))
+
+## Source: local data frame [10,018,809 x 4]
+## 
+##           Created.Date            Closed.Date               Due.Date           Updated.Date
+##                 (time)                  (chr)                  (chr)                  (chr)
+## 1  2015-10-06 02:13:38 10/06/2015 07:12:35 AM 10/13/2015 07:11:15 AM 10/06/2015 07:12:35 AM
+## 2  2015-10-06 02:11:28 10/06/2015 03:17:00 AM 10/06/2015 10:11:28 AM 10/06/2015 03:17:00 AM
+## 3  2015-10-06 02:08:09                        11/05/2015 02:08:09 AM 10/06/2015 02:19:16 AM
+## 4  2015-10-06 02:03:54                        11/05/2015 02:03:54 AM 10/06/2015 02:06:32 AM
+## 5  2015-10-06 01:58:53 10/06/2015 03:54:33 AM 10/06/2015 09:58:53 AM 10/06/2015 03:54:33 AM
+## 6  2015-10-06 01:58:42 10/06/2015 02:42:21 AM 10/06/2015 09:58:42 AM 10/06/2015 02:42:21 AM
+## 7  2015-10-06 01:55:18 10/06/2015 11:06:48 AM 10/06/2015 09:55:18 AM 10/06/2015 11:06:49 AM
+## 8  2015-10-06 01:52:18 10/06/2015 02:59:04 AM 10/06/2015 09:52:18 AM 10/06/2015 02:59:04 AM
+## 9  2015-10-06 01:49:04 10/06/2015 03:03:21 AM 10/06/2015 09:49:04 AM 10/06/2015 03:03:21 AM
+## 10 2015-10-06 01:47:27 10/06/2015 03:07:37 AM 10/06/2015 09:47:27 AM 10/06/2015 03:07:37 AM
+## ..                 ...                    ...                    ...                    ...
+```
+
+## arrange() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(2:3) %>% arrange(Created.Date, Closed.Date)
+
+## Source: local data frame [10,018,809 x 2]
+## 
+##    Created.Date            Closed.Date
+##          (time)                  (chr)
+## 1    2010-01-01                       
+## 2    2010-01-01                       
+## 3    2010-01-01                       
+## 4    2010-01-01 01/01/2010 12:00:00 AM
+## 5    2010-01-01 01/01/2010 12:00:00 AM
+## 6    2010-01-01 01/01/2010 12:00:00 AM
+## 7    2010-01-01 01/01/2010 12:00:00 AM
+## 8    2010-01-01 01/01/2010 12:00:00 AM
+## 9    2010-01-01 01/01/2010 12:00:00 AM
+## 10   2010-01-01 01/01/2010 12:00:00 AM
+## ..          ...                    ...
+```
+
+## arrange() & desc() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(2:3) %>% arrange(desc(Created.Date), desc(Closed.Date))
+
+## Source: local data frame [10,018,809 x 2]
+## 
+##           Created.Date            Closed.Date
+##                 (time)                  (chr)
+## 1  2015-10-06 02:13:38 10/06/2015 07:12:35 AM
+## 2  2015-10-06 02:11:28 10/06/2015 03:17:00 AM
+## 3  2015-10-06 02:08:09                       
+## 4  2015-10-06 02:03:54                       
+## 5  2015-10-06 01:58:53 10/06/2015 03:54:33 AM
+## 6  2015-10-06 01:58:42 10/06/2015 02:42:21 AM
+## 7  2015-10-06 01:55:18 10/06/2015 11:06:48 AM
+## 8  2015-10-06 01:52:18 10/06/2015 02:59:04 AM
+## 9  2015-10-06 01:49:04 10/06/2015 03:03:21 AM
+## 10 2015-10-06 01:47:27 10/06/2015 03:07:37 AM
+## ..                 ...                    ...
+```
+
+## mutate() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(2:3) %>%
+        mutate(month = month(Created.Date),
+               day   = day(Created.Date),
+               year  = year(Created.Date),
+               wday  = wday(Created.Date, label=TRUE))
+
+## Source: local data frame [10,018,809 x 6]
+## 
+##           Created.Date            Closed.Date month   day  year   wday
+##                 (time)                  (chr) (dbl) (int) (dbl) (fctr)
+## 1  2015-10-06 02:13:38 10/06/2015 07:12:35 AM    10     6  2015   Tues
+## 2  2015-10-06 02:11:28 10/06/2015 03:17:00 AM    10     6  2015   Tues
+## 3  2015-10-06 02:08:09                           10     6  2015   Tues
+## 4  2015-10-06 02:03:54                           10     6  2015   Tues
+## 5  2015-10-06 01:58:53 10/06/2015 03:54:33 AM    10     6  2015   Tues
+## 6  2015-10-06 01:58:42 10/06/2015 02:42:21 AM    10     6  2015   Tues
+## 7  2015-10-06 01:55:18 10/06/2015 11:06:48 AM    10     6  2015   Tues
+## 8  2015-10-06 01:52:18 10/06/2015 02:59:04 AM    10     6  2015   Tues
+## 9  2015-10-06 01:49:04 10/06/2015 03:03:21 AM    10     6  2015   Tues
+## 10 2015-10-06 01:47:27 10/06/2015 03:07:37 AM    10     6  2015   Tues
+## ..                 ...                    ...   ...   ...   ...    ...
+```
+
+## transmute() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(2:3) %>%
+        transmute(month = month(Created.Date),
+                  day   = day(Created.Date),
+                  year  = year(Created.Date),
+                  wday  = wday(Created.Date, label=TRUE))
+
+## Source: local data frame [10,018,809 x 4]
+## 
+##    month   day  year   wday
+##    (dbl) (int) (dbl) (fctr)
+## 1     10     6  2015   Tues
+## 2     10     6  2015   Tues
+## 3     10     6  2015   Tues
+## 4     10     6  2015   Tues
+## 5     10     6  2015   Tues
+## 6     10     6  2015   Tues
+## 7     10     6  2015   Tues
+## 8     10     6  2015   Tues
+## 9     10     6  2015   Tues
+## 10    10     6  2015   Tues
+## ..   ...   ...   ...    ...
+```
+
+## distinct() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% distinct()
+
+## Source: local data frame [10,018,809 x 48]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency                             Agency.Name
+##         (int)              (time)                  (chr)  (chr)                                   (chr)
+## 1    31684123 2015-10-06 02:13:38 10/06/2015 07:12:35 AM    DOF                   Department of Finance
+## 2    31683037 2015-10-06 02:11:28 10/06/2015 03:17:00 AM   NYPD         New York City Police Department
+## 3    31682998 2015-10-06 02:08:09                         DOHMH Department of Health and Mental Hygiene
+## 4    31682990 2015-10-06 02:03:54                         DOHMH Department of Health and Mental Hygiene
+## 5    31688533 2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD         New York City Police Department
+## 6    31686111 2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD         New York City Police Department
+## 7    31687396 2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD         New York City Police Department
+## 8    31687311 2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD         New York City Police Department
+## 9    31690976 2015-10-06 01:49:04 10/06/2015 03:03:21 AM   NYPD         New York City Police Department
+## 10   31686103 2015-10-06 01:47:27 10/06/2015 03:07:37 AM   NYPD         New York City Police Department
+## ..        ...                 ...                    ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (chr),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr),
+##   Facility.Type (chr), Status (chr), Due.Date (chr), Resolution.Description (chr),
+##   Resolution.Action.Updated.Date (chr), Community.Board (chr), Borough (chr), Park.Facility.Name (chr),
+##   Park.Borough (chr), School.Name (chr), School.Number (chr), School.Region (chr), School.Code (chr),
+##   School.Phone.Number (chr), School.Address (chr), School.City (chr), School.State (chr), School.Zip (chr),
+##   School.Not.Found (chr), School.or.Citywide.Complaint (chr), Vehicle.Type (chr), Taxi.Company.Borough
+##   (chr), Taxi.Pick.Up.Location (chr), Bridge.Highway.Name (chr), Bridge.Highway.Direction (chr), Road.Ramp
+##   (chr), Bridge.Highway.Segment (chr), Garage.Lot.Name (chr), Ferry.Direction (chr), Ferry.Terminal.Name
+##   (chr)
+```
+
+## sample_n() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(1:6) %>% sample_n(10)
+
+## Source: local data frame [10 x 6]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency
+##         (int)              (time)                  (chr)  (chr)
+## 1    26118525 2013-07-25 14:07:31 07/29/2013 12:00:00 AM    DOB
+## 2    19140637 2010-11-16 20:06:00 11/24/2010 02:35:00 AM    DOT
+## 3    23395214 2012-06-10 23:43:21 06/11/2012 01:05:56 AM   NYPD
+## 4    24595481 2012-12-14 17:53:00 03/04/2013 10:00:00 AM    DEP
+## 5    18982083 2010-10-26 00:00:00 11/04/2010 12:00:00 AM    HPD
+## 6    24367995 2012-11-08 12:46:00 11/30/2012 08:30:00 AM    DEP
+## 7    24189309 2012-10-12 11:38:51 12/19/2012 12:00:00 AM    DOB
+## 8    21064507 2011-08-18 00:00:00 08/31/2011 12:00:00 AM    HPD
+## 9    26083566 2013-07-25 12:21:00 07/26/2013 03:00:00 PM    DEP
+## 10   26207934 2013-08-27 12:58:30 09/05/2013 10:14:40 AM    DOT
+## Variables not shown: Agency.Name (chr), Complaint.Type (chr)
+```
+
+## sample_frac() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(1:6) %>% sample_frac(0.0001)
+
+## Source: local data frame [1,002 x 6]
+## 
+##    Unique.Key        Created.Date            Closed.Date Agency
+##         (int)              (time)                  (chr)  (chr)
+## 1    15678633 2010-01-07 10:12:48 01/21/2010 10:15:45 AM    DOT
+## 2    15791309 2010-01-23 00:00:00 01/29/2010 12:00:00 AM    HPD
+## 3    19752488 2011-02-03 06:34:21 02/11/2011 05:41:24 PM    DOT
+## 4    22939003 2012-03-22 23:42:44 03/23/2012 08:55:00 PM    DOT
+## 5    30534000 2015-05-02 00:00:00 05/05/2015 12:00:00 AM    HPD
+## 6    26273235 2013-09-07 15:32:00 10/14/2013 10:30:00 PM    DEP
+## 7    25842183 2013-06-29 20:02:00 07/01/2013 04:00:00 PM    DEP
+## 8    20939698 2011-07-30 13:35:03 08/04/2011 10:32:54 AM    DOT
+## 9    31376287 2015-08-24 01:50:13 09/14/2015 05:14:56 PM    EDC
+## 10   19056599 2010-11-05 00:00:00 12/02/2010 12:00:00 AM    HPD
+## ..        ...                 ...                    ...    ...
+## Variables not shown: Agency.Name (chr), Complaint.Type (chr)
+```
+
+## summarise() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% summarize(n(), min(Created.Date), max(Created.Date))
+
+## Source: local data frame [1 x 3]
+## 
+##        n() min(Created.Date)   max(Created.Date)
+##      (int)            (time)              (time)
+## 1 10018809        2010-01-01 2015-10-06 02:13:38
+```
+
+## group_by() {.smaller}
+
+```{r, eval=FALSE}
+nyc %>% select(2:4) %>% group_by(Agency)
+
+## Source: local data frame [10,018,809 x 3]
+## Groups: Agency [63]
+## 
+## 
+##           Created.Date            Closed.Date Agency
+##                 (time)                  (chr)  (chr)
+## 1  2015-10-06 02:13:38 10/06/2015 07:12:35 AM    DOF
+## 2  2015-10-06 02:11:28 10/06/2015 03:17:00 AM   NYPD
+## 3  2015-10-06 02:08:09                         DOHMH
+## 4  2015-10-06 02:03:54                         DOHMH
+## 5  2015-10-06 01:58:53 10/06/2015 03:54:33 AM   NYPD
+## 6  2015-10-06 01:58:42 10/06/2015 02:42:21 AM   NYPD
+## 7  2015-10-06 01:55:18 10/06/2015 11:06:48 AM   NYPD
+## 8  2015-10-06 01:52:18 10/06/2015 02:59:04 AM   NYPD
+## 9  2015-10-06 01:49:04 10/06/2015 03:03:21 AM   NYPD
+## 10 2015-10-06 01:47:27 10/06/2015 03:07:37 AM   NYPD
+## ..                 ...                    ...    ...
+```
+
+## summarise() with group_by() {.smaller}
+
+```{r eval=FALSE}
+nyc %>% select(1:6) %>%
+        group_by(Agency) %>%
+        summarize(n(), min(Created.Date), max(Created.Date), Agency.Name)
+
+## Source: local data frame [63 x 4]
+## 
+##    Agency    n()   min(Created.Date)   max(Created.Date)
+##     (chr)  (int)              (time)              (time)
+## 1   3-1-1  22454 2010-01-04 12:59:48 2015-10-06 01:17:34
+## 2     ACS      5 2011-12-21 10:08:36 2015-06-03 10:19:57
+## 3     AJC      8 2012-04-22 15:39:21 2015-05-23 00:11:38
+## 4     CAU      8 2011-10-26 19:04:07 2015-03-02 16:05:52
+## 5    CCRB     10 2012-02-14 11:19:12 2015-08-07 17:17:16
+## 6   CHALL  15623 2011-10-21 08:20:36 2015-10-05 23:00:18
+## 7    COIB     21 2011-10-22 18:20:48 2014-10-03 14:02:55
+## 8     CWI      4 2011-11-23 11:43:34 2012-12-15 04:33:54
+## 9     DCA 123449 2010-01-01 00:45:43 2015-10-06 01:02:34
+## 10   DCAS      8 2012-04-11 20:16:36 2015-06-23 10:09:17
+## ..    ...    ...                 ...                 ...
+```

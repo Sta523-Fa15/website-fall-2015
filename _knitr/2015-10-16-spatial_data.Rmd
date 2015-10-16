@@ -1,0 +1,685 @@
+---
+layout: page
+title: Spatial Data in R
+reading: ""
+notes: "<a href='https://github.com/johan/world.geo.json'>Country GeoJSON</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: true
+slides: true
+---
+
+# Background
+
+## Analysis of geospatial data in R {.smaller}
+
+R has a rich package ecosystem for read/writing, manipulating, and analyzing geospatial data.
+
+<br/>
+
+Some core packages:
+
+* `sp` - core classes for handling spatial data, additional utility functions.
+
+* `rgdal` - R interface to `gdal` (Geospatial Data Abstraction Library) for reading and writing spatial data.
+
+* `maptools` - Additional tools for reading and writing spatial data.
+
+* `rgeos` - R interface to `geos` (Geometry Engine Open Source) library for querying and manipulating spatial data. Reading and writing WKT.
+
+* `raster` - classes and tools for handling spatial raster data.
+
+<br/>
+
+See more - [Spatial task view](http://cran.r-project.org/web/views/Spatial.html)
+
+
+
+
+## Taxonomy of geospatial objects (Simple Features) {.smaller}
+
+```{r, echo=FALSE, results='hide'}
+suppressMessages(library(rgeos, quietly=TRUE, warn.conflicts=FALSE))
+suppressMessages(library(rgdal, quietly=TRUE, warn.conflicts=FALSE))
+suppressMessages(library(sp, quietly=TRUE, warn.conflicts=FALSE))
+suppressMessages(library(maptools, quietly=TRUE, warn.conflicts=FALSE))
+
+poly_coords = function(sp)
+{
+  do.call(rbind,
+          lapply(sp@polygons,
+                 function(p)
+                    do.call(rbind, lapply(p@Polygons,
+                                          function(P)
+                                            coordinates(P)
+                                         )
+                    )
+          )
+  )
+}
+```
+
+
+```{r, echo=FALSE, out.width="1000px", out.height="500px"}
+par(mar=c(1,1,2,1), mfrow=c(2,4))
+
+## Point
+sp = readWKT('POINT (30 10)')
+plot(sp, axes=FALSE, main="Point", pch=16)
+points(coordinates(sp), pch=16)
+box()
+
+## Linestring
+sp = readWKT('LINESTRING (30 10, 10 30, 40 40)')
+plot(sp, axes=FALSE, main="Linestring")
+r=rapply(coordinates(sp), points, pch=16)
+box()
+
+## Polygon
+sp = readWKT('POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))')
+plot(sp, axes=FALSE, col="lightgrey", main="Polygon")
+points(poly_coords(sp), pch=16)
+box()
+
+## Polygon with Hole
+sp = readWKT('POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),
+              (20 30, 35 35, 30 20, 20 30))')
+plot(sp, axes=FALSE, col="lightgrey", main="Polygon w/ Hole(s)")
+points(poly_coords(sp), pch=16)
+box()
+
+
+## MultiPoint
+sp = readWKT('MULTIPOINT ((10 40), (40 30), (20 20), (30 10))')
+plot(sp, axes=FALSE, pch=16, main="Multi Point")
+points(coordinates(sp), pch=16)
+box()
+
+## MultiLineString
+sp = readWKT('MULTILINESTRING ((10 10, 20 20, 10 40),
+                    (40 40, 30 30, 40 20, 30 10))')
+plot(sp, axes=FALSE, main="Multi Linestring")
+r=rapply(coordinates(sp), points, pch=16)
+box()
+
+
+## MultiPolygon
+sp = readWKT('MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)),
+                   ((15 5, 40 10, 10 20, 5 10, 15 5)))')
+plot(sp, axes=FALSE, col="lightgrey", main="Multi Polygon")
+points(poly_coords(sp), pch=16)
+box()
+
+## MultiPolygon with Hole(s)
+sp = readWKT('MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)),
+                   ((20 35, 10 30, 10 10, 30 5, 45 20, 20 35),
+                    (30 20, 20 15, 20 25, 30 20)))')
+plot(sp, axes=FALSE, col="lightgrey", main="Multi Polygon w/ Hole(s)")
+points(poly_coords(sp), pch=16)
+box()
+```
+
+
+## Geometry Collection {.smaller}
+
+```{r, echo=FALSE, fig.align='center', out.width='800px'}
+par(mar=c(1,1,1,1))
+
+cols = c("#7fc97f","#386cb0","#beaed4","#fdc086")
+
+pt   = readWKT('POINT (3 3)')
+mpt  = readWKT('MULTIPOINT ((4 8), (1 8))')
+mls  = readWKT('MULTILINESTRING ((4 6,7 10), (1 1,1 2,2 2))')
+poly = readWKT('POLYGON ((6 6, 8 6, 8 8, 6 6))')
+plot(0, 0, type='n', axes=FALSE, xlim=c(0,9),ylim=c(0,11),xlab="",ylab="", main="")
+box()
+
+plot(pt, add=TRUE, pch=16, col=cols[1], cex=1.5)
+
+plot(mpt, add=TRUE, pch=16, col=cols[2], cex=1.5)
+
+plot(mls, add=TRUE, col=cols[3], lwd=2)
+r=rapply(coordinates(mls), points, pch=16, col=cols[3], cex=1.5)
+
+plot(poly, add=TRUE, col=paste0(cols[4],"CC"),lwd=2,border=cols[4])
+points(poly_coords(poly), pch=16, col=paste0(cols[4],"CC"),cex=1.5)
+```
+
+## R and Simple Feature Access {.smaller}
+
+The R package `sp` provides classes that implement these geospatial objects.
+
+<br/>
+
+|                 | Point(s)                 | Linestring(s)           | Polygon(s)                 | Geometry Collection             |
+|:---------------:|--------------------------|-------------------------|----------------------------|:-------------------------------:|
+|    Geometry     | `SpatialPoints`          | `SpatialLines`          | `SpatialPolygons`          | `SpatialCollection`*            |
+| Geometry + Data | `SpatialPointsDataFrame` | `SpatialLinesDataFrame` | `SpatialPolygonsDataFrame` | ---                             |
+
+<br/>
+
+They also handle additional tasks like tracking the projection of the spatial coordinates.
+
+```{r echo=FALSE, results='hide'}
+data(wrld_simpl)
+NAm = wrld_simpl[wrld_simpl$FIPS %in% c("CA","GL","MX","US"),]
+NAm_google = spTransform(NAm, CRS("+init=epsg:3857"))
+```
+
+## Reading and writing geospatial data via `sp`
+
+- `maptools`:
+    * `readShapePoints` / `writeShapePoints` - Shapefile w/ points
+    * `readShapeLines` / `writeShapeLines` - Shapefile w/ lines
+    * `readShapePoly` / `writeShapePoly` - Shapefile w/ polygons
+    * `readShapeSpatial` / `writeShapeSpatial` - Shapefile
+- `rgdal`:
+    * `readOGR` / `writeOGR` - Shapefile, GeoJSON, KML, ...
+- `rgeos`:
+    * `readWKT` / `writeWKT` - Well Known Text
+
+<!--
+## Geospatial object details {.smaller}
+
+<div class="columns-2">
+```{r}
+ogrInfo("data/ak/",layer="states")
+```
+```{r}
+ogrInfo("data/us_interstates/","us_interstates")
+```
+<br/><br/><br/><br/>
+</div>
+-->
+
+# Geospatial stuff is hard
+
+## Projections
+
+```{r echo=FALSE, out.width="1000px", out.height="500px", fig.align="center"}
+par(mar=c(3,2,2,1),mfrow=c(1,2))
+plot(NAm, col="black", border=adjustcolor("black",alpha=0),
+     main="Lat/Long (epsg:4326)", xlim=c(-180,-10), axes=TRUE)
+box()
+
+plot(NAm_google, col="black", border=adjustcolor("black",alpha=0),
+     main="Google (epsg:3857)", axes=TRUE, xlim=c(-2e7,0), ylim=c(0,2e7))
+box()
+```
+
+## Dateline
+
+Want to fly from the Western most point in the US to the Eastern most point?
+
+
+```{r echo=FALSE, fig.align="center", fig.height=4, fig.width=10}
+par(mar=c(3,3,1,1))
+ak = readOGR("data/ak/states.shp","states",FALSE)
+
+for(i in 1:length(ak@polygons[[1]]@Polygons))
+{
+    p = ak@polygons[[1]]@Polygons[[i]]@coords
+    p[p[,1] > 0,1] = -360 + p[p[,1] > 0,1]
+    ak@polygons[[1]]@Polygons[[i]]@coords = p
+}
+
+plot(ak, col="black", xlim=c(-170,-190), ylim=c(51,53),axes=TRUE)
+points(c(-360+179.776,-179.146), c(51.952,51.273),col='red')
+abline(v=-180,col='blue',lty=2)
+```
+
+##
+
+```{r echo=FALSE}
+library(geosphere)
+par(mar=c(0,0,0,0))
+```
+
+```{r fig.align="center", fig.width=10, fig.height=4.5}
+inter = gcIntermediate(c(179.776,51.952), c(-179.146,51.273), n=50, addStartEnd=TRUE)
+
+plot(wrld_simpl, col="black", ylim=c(15,90))
+lines(inter,col='red',lwd=2,lty=3)
+```
+
+## Relationships
+
+<img src="imgs/taal_photo.jpg" width="500" height="500" style="display: block; margin: auto;"/>
+
+## Distance
+
+```{r echo=FALSE, fig.align="center"}
+pt = readWKT("MULTIPOINT ((45 43), (15 70))")
+ls = readWKT("LINESTRING (10 10, 10 90)")
+po = readWKT("POLYGON ((30 50, 50 80, 70 50, 50 20, 30 50), (40 40, 60 40, 60 60, 40 60, 40 40))")
+
+par(mar=c(0,0,0,0))
+plot(0,0, type='n', axes=FALSE, xlab="", ylab="", xlim=c(0,90),ylim=c(0,90))
+
+
+plot(pt, add=TRUE, pch=16, col=cols[1], cex=1.5)
+text(48,50,"C",cex=3,col=cols[1])
+text(18,77,"C",cex=3,col=cols[1])
+
+plot(ls, add=TRUE, col=cols[3], lwd=2)
+r=rapply(coordinates(ls), points, pch=16, col=cols[3], cex=1.5)
+text(5,50,"B",cex=3,col=cols[3])
+
+plot(po, add=TRUE, col=paste0(cols[4],"CC"),lwd=2,border=cols[4])
+points(poly_coords(po), pch=16, col=paste0(cols[4],"CC"),cex=1.5)
+text(35,70,"A",cex=3,col=paste0(cols[4],"CC"))
+```
+
+How do we define the distance between A and B, A and C, or B and C?
+
+
+# Well Known Text vs geoJSON
+
+
+## Points & MultiPoint
+
+WKT:
+<div class="columns-2">
+```wkt
+POINT (30 10)
+```
+```wkt
+MULTIPOINT ((10 40), (40 30), (20 20), (30 10))
+```
+</div>
+
+
+GeoJSON:
+<div class="columns-2">
+```json
+{
+  "type": "Point", 
+  "coordinates": [30, 10]
+}
+```
+
+```json
+{
+  "type": "MultiPoint", 
+  "coordinates": 
+    [ [10, 40], [40, 30], [20, 20], [30, 10] ]
+}
+```
+</div>
+
+
+## LineString & MultiLineString
+
+WKT:
+<div class="columns-2">
+```wkt
+LINESTRING (30 10, 10 30, 40 40) {.smaller}
+```
+<br/>
+```wkt
+MULTILINESTRING ((10 10, 20 20, 10 40), 
+                 (40 40, 30 30, 40 20, 30 10))
+```
+</div>
+
+
+GeoJSON:
+<div class="columns-2">
+```json
+{
+   "type": "LineString", 
+   "coordinates": 
+      [ [30, 10], [10, 30], [40, 40] ]
+}
+```
+<br/>
+```json
+{
+   "type": "MultiLineString", 
+   "coordinates": 
+      [ [[10, 10], [20, 20], [10, 40]], 
+        [[40, 40], [30, 30], [40, 20], [30, 10]]
+      ]
+}
+```
+</div>
+
+
+
+
+## Polygon & MultiPolygon
+
+WKT:
+<div class="columns-2">
+```wkt
+POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))
+```
+<br/>
+```wkt
+MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)),
+              ((15 5, 40 10, 10 20, 5 10, 15 5)))
+```
+</div>
+
+GeoJSON:
+<div class="columns-2">
+```json
+{
+  "type": "Polygon", 
+  "coordinates": [ [[30, 10], [40, 40], [20, 40], 
+                    [10, 20], [30, 10]] ]
+}
+```
+<br/>
+```json
+{
+  "type": "MultiPolygon", 
+  "coordinates": 
+    [ [ [[30, 20], [45, 40], [10, 40], [30, 20]] ], 
+      [ [[15, 5], [40, 10], [10, 20], 
+         [5, 10], [15, 5]] ]
+    ]
+}
+```
+</div>
+
+
+
+## Polygon & MultiPolygon with Hole(s)
+
+WKT:
+<div class="columns-2">
+```wkt
+POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),
+         (20 30, 35 35, 30 20, 20 30))
+```
+<br/>
+```wkt
+MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)),
+              ((20 35, 10 30, 10 10, 
+                30 5, 45 20, 20 35),
+               (30 20, 20 15, 20 25, 30 20)))
+```
+</div>
+
+
+GeoJSON:
+<div class="columns-2">
+```json
+{
+  "type": "Polygon", 
+  "coordinates": 
+    [ [[35, 10], [45, 45], [15, 40], 
+       [10, 20], [35, 10]], 
+      [[20, 30], [35, 35], [30, 20], [20, 30]]
+    ]
+}
+```
+
+
+```json
+{
+  "type": "MultiPolygon", 
+  "coordinates": 
+    [  [ [[40, 40], [20, 45], [45, 30], [40, 40]] ], 
+       [ [[20, 35], [10, 30], [10, 10], [30, 5], 
+          [45, 20], [20, 35]], 
+         [[30, 20], [20, 15], [20, 25], [30, 20]]
+       ]
+    ]
+}
+```
+</div>
+
+
+
+
+## GeometryCollection
+
+WKT:
+```wkt
+GEOMETRYCOLLECTION (POINT (4 8),
+                     LINESTRING (4 6,7 10),
+                     POLYGON ((6 6, 8 6, 8 8, 6 6)))'
+```
+
+GeoJSON:
+```json
+{
+  "type": "GeometryCollection",
+  "geometries": [
+                  { 
+                    "type": "Point",
+                    "coordinates": [30, 10]
+                  },
+                  { 
+                    "type": "LineString",
+                    "coordinates": [ [30, 10], [10, 30], [40, 40] ]
+                  }
+                ]
+}
+```
+
+
+# Shapefiles
+
+## Data
+
+The following data is all from Mike Bostock's `us-atlas` git repository - https://github.com/mbostock/us-atlas.
+
+Available on `saxon` in `~cr173/Sta523/data/us-atlas/shp/us`.
+
+```{r eval=FALSE}
+dir("~cr173/Sta523/data/us-atlas/shp/us/","*.shp")
+
+##  [1] "amtrak.shp"              "cbsa.shp"                "coast.shp"               "congress-unfiltered.shp"
+##  [5] "counties-unfiltered.shp" "counties.shp"            "ferries.shp"             "nation-unmerged.shp"    
+##  [9] "ports.shp"               "railroads.shp"           "roads-unmerged.shp"      "states-unfiltered.shp"  
+## [13] "streams-unmerged.shp"    "waterbodies.shp"         "zipcodes-unmerged.shp"  
+```
+
+##  Shapefile components
+
+```{r eval=FALSE}
+system("ls -lh ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered*")
+
+## -rw-r--r--+ 1 cr173 visitor 8.8K Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.dbf
+## -rw-r--r--+ 1 cr173 visitor  167 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.prj
+## -rw-r--r--+ 1 cr173 visitor  772 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.sbn
+## -rw-r--r--+ 1 cr173 visitor  156 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.sbx
+## -rw-r--r--+ 1 cr173 visitor  11M Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.shp
+## -rw-r--r--+ 1 cr173 visitor  596 Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.shx
+## -rw-r--r--+ 1 cr173 visitor  19K Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.txt
+## -rw-r--r--+ 1 cr173 visitor 7.4K Sep 30 14:36 ~cr173/Sta523/data/us-atlas/shp/us/states-unfiltered.xml
+```
+
+<br/>
+
+<div class="columns-2">
+Required files :
+
+* `.shp` - the feature geometry data
+* `.shx` - shape index
+* `.dbf` - columnar attributes for each shape, in dBase IV format
+
+
+Optional files :
+
+* `.prj` - coordinate system and projection information
+* `.sbn` and `.sbx` - spatial indexes of the features
+* `.xml` - geospatial metadata
+</div>
+
+## Shapefile info {.smaller}
+
+```{r, eval=FALSE}
+suppressMessages(library(rgdal))
+ogrInfo(path.expand("~cr173/Sta523/data/us-atlas/shp/us/"),"states-unfiltered")
+
+## Source: "/home/vis/cr173/Sta523/data/us-atlas/shp/us/", layer: "states-unfiltered"
+## Driver: ESRI Shapefile; number of rows: 62 
+## Feature type: wkbPolygon with 2 dimensions
+## Extent: (-179.1473 17.6744) - (179.7785 71.38921)
+## CRS: +proj=longlat +datum=NAD83 +no_defs  
+## LDID: 87 
+## Number of fields: 9 
+##         name type length typeName
+## 1       AREA    2     11     Real
+## 2  PERIMETER    2     11     Real
+## 3 STATESP010    2     19     Real
+## 4      STATE    4     20   String
+## 5 STATE_FIPS    4      2   String
+## 6  ORDER_ADM    2     19     Real
+## 7  MONTH_ADM    4     18   String
+## 8    DAY_ADM    2     19     Real
+## 9   YEAR_ADM    2     19     Real
+```
+
+## Reading a Shapefile {.smaller}
+
+```{r, eval=FALSE}
+states = readOGR(path.expand("~cr173/Sta523/data/us-atlas/shp/us/"),
+                 "states-unfiltered", stringsAsFactors=FALSE)
+
+## OGR data source with driver: ESRI Shapefile 
+## Source: "/home/vis/cr173/Sta523/data/us-atlas/shp/us/", layer: "states-unfiltered"
+## with 62 features
+## It has 9 fields
+
+class(states)
+
+## [1] "SpatialPolygonsDataFrame"
+## attr(,"package")
+## [1] "sp"
+```
+
+```{r echo=FALSE, results="hide"}
+states = readOGR(path.expand("data/us/"),
+                 "states-unfiltered", stringsAsFactors=FALSE)
+```
+
+## Shapefile contents (data)
+
+```{r}
+states@data
+```
+
+
+## Shapefile contents (shapes)
+
+```{r, fig.align='center'}
+plot(states[states$ORDER_ADM %in% 1:48,], col="lightgrey", axes=TRUE)
+```
+
+## Why Illinois twice?
+
+```{r, fig.align='center'}
+plot(states[states$STATE == "Illinois",], col=c("lightgrey","lightblue"), axes=TRUE)
+```
+
+## Why Michigan twice?
+
+```{r, fig.align='center'}
+plot(states[states$STATE == "Michigan",], col=c("lightgrey","lightblue"), axes=TRUE)
+```
+
+## Removing duplicates / the Great Lakes
+
+```{r, fig.align='center'}
+states = states[!duplicated(states$STATE),]
+plot(states[states$ORDER_ADM %in% 1:48,], col="lightgrey", axes=TRUE)
+```
+
+
+
+
+
+
+<!--
+
+
+
+# Exercise
+
+## Largest Island in a lake on an island in a lake on an island
+
+![Taal Island](imgs/Taal.jpg)
+
+## (Fake) Island in a lake on an island in a lake
+
+```{r, echo=FALSE}
+fix_coords = function(x,n=2)
+{
+  for(i in 1:length(x@polygons))
+  {
+    for(j in 1:length(x@polygons[[i]]@Polygons))
+    {
+      x@polygons[[i]]@Polygons[[j]]@coords = round(x@polygons[[i]]@Polygons[[j]]@coords,n)
+    }
+  }
+
+  return(x)
+}
+
+get_coords = function(x)
+{
+  x = fix_coords(x,3)
+  x@polygons[[1]]@Polygons[[1]]@coords
+}
+
+set.seed(123)
+
+bound   = data.frame(x=c(0,0,1000,1000,0)/100,y=c(0,1000,1000,0,0)/100) 
+lake1   = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,100)/100,rnorm(1000,500,100)/100))) )
+island1 = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,50)/100, rnorm(1000,500,50)/100))) )
+lake2   = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,25)/100, rnorm(1000,500,25)/100))) )
+island2 = get_coords( gConvexHull(SpatialPoints(data.frame(rnorm(1000,500,10)/100, rnorm(1000,500,10)/100))) )
+
+makeWKT = function(x)
+{
+  paste0("(", paste0(apply(x, 1, paste, collapse=" "), collapse=", "), ")")
+}
+
+s = paste0("MULTIPOLYGON ( \n", 
+           paste0("(", makeWKT(bound), ", ", makeWKT(lake1), "),\n"),
+           paste0("(", makeWKT(island1), ", ", makeWKT(lake2), "),\n"),
+           paste0("(", makeWKT(island2), ")"),
+           " )")
+```
+
+```{r, out.width="500px", out.height="500px", fig.width=7, fig.height=7, fig.align="center"}
+plot(readWKT(s),bg="blue",col="forestgreen", xlim=c(1.50,8.50), ylim=c(1.50,8.50), asp=1)
+```
+
+
+## Exercise
+
+Translate the following WKT into GeoJSON.  
+
+```
+MULTIPOLYGON( ( (0 0, 0 10, 10 10, 10 0, 0 0), 
+                (4.307 1.952, 2.19 2.855, 2.339 5.51, 
+                 3.058 6.973, 3.382 7.424, 3.786 7.816, 
+                 4.348 8.184, 5.661 8.39, 7.575 7.448, 
+                 8.241 4.885, 7.692 3.755, 7.43 3.454, 
+                 6.843 3.035, 5.562 2.371, 4.307 1.952)
+              ),
+              ( (4.38 3.435, 4.143 3.661, 3.835 4.296, 
+                 3.746 4.543, 3.576 5.077, 3.684 5.632, 
+                 3.955 5.94, 4.71 6.27, 5.162 6.447, 
+                 6.368 5.771, 6.711 5.024, 6.511 4.179, 
+                 5.641 3.757, 5.252 3.58, 4.38 3.435), 
+                (4.642 4.184, 4.443 4.456, 4.289 4.73, 
+                 4.216 5.086, 4.643 5.929, 5.391 5.771, 
+                 5.809 5.027, 5.861 4.917, 5.748 4.722, 
+                 5.3 4.203, 4.642 4.184)
+              ),
+              ( (4.829 4.615, 4.671 4.952, 4.659 5.065, 
+                 4.846 5.285, 4.941 5.286, 4.963 5.282, 
+                 5.084 5.263, 5.198 5.216, 5.328 4.993, 
+                 5.208 4.798, 5.156 4.731, 4.829 4.615)
+              ) 
+            )
+```
+-->
