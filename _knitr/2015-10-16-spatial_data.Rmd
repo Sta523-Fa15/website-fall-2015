@@ -179,20 +179,6 @@ NAm_google = spTransform(NAm, CRS("+init=epsg:3857"))
 - `rgeos`:
     * `readWKT` / `writeWKT` - Well Known Text
 
-<!--
-## Geospatial object details {.smaller}
-
-<div class="columns-2">
-```{r}
-ogrInfo("data/ak/",layer="states")
-```
-```{r}
-ogrInfo("data/us_interstates/","us_interstates")
-```
-<br/><br/><br/><br/>
-</div>
--->
-
 # Geospatial stuff is hard
 
 ## Projections

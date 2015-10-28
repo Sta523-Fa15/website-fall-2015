@@ -1,0 +1,519 @@
+---
+layout: page
+title: dplyr and SQL
+reading: "<a href='http://cran.r-project.org/web/packages/dplyr/vignettes/databases.html'>dplyr database vignette</a>"
+notes: "<a href='http://www.sqlite.org/queryplanner.html'>How Indexes Work</a>, <a href='http://tech.pro/tutorial/1555/10-easy-steps-to-a-complete-understanding-of-sql'>SQL Intro</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: true
+---
+
+```{r, echo=FALSE, include=FALSE}
+options(width = 110)
+library(dplyr)
+```
+
+
+# The why of databases
+
+## Numbers everyone should know
+
+| Task                                | Timing            |
+|-------------------------------------|-------------------|
+| L1 cache reference                  | 0.5 ns            |
+| L2 cache reference                  | 7 ns              |
+| Main memory reference               | 100 ns            |
+| Read 1 MB sequentially from memory  | 250,000 ns        |
+| Disk seek                           | 10,000,000 ns     |
+| Read 1 MB sequentially from network | 10,000,000 ns     |
+| Read 1 MB sequentially from disk    | 30,000,000 ns     |
+
+<div style="font-size: 10pt">
+From: http://surana.wordpress.com/2009/01/01/numbers-everyone-should-know/
+</div>
+
+
+## Implications for bigish data
+
+Lets imagine we have a *10 GB* flat data file and that we want to select certain rows based on a given criteria. This requires a sequential read across the entire data set.
+
+
+If we can store the file in memory:
+
+* $10~GB \times (250~\mu s / 1~MB) = 0.25$ seconds
+
+If we have to access the file from disk:
+
+* $10~GB \times (30~ms / 1~MB) = 30$ seconds
+
+<br/>
+
+This is just for *reading* data, if we make any modifications (*writing*) things are much worse. 
+
+
+## Implications for big data
+
+What about a *100 GB* flat data file?
+
+If we can store the file in memory:
+
+* $100~GB \times (250~\mu s / 1~MB) = 2.5$ seconds
+
+If we have to access the file from disk:
+
+* $100~GB \times (30~ms / 1~MB) = 300$ seconds
+
+<br/>
+
+This is actually incredibly optimistic since it assumes that all the data on disk can be read in one continuous read.
+
+
+## Blocks
+
+<div class="centered">
+Cost: Disk << Memory
+
+Speed: Disk <<< Memory
+</div>
+
+<br/>
+
+So usually possible to grow our disk storage to accommodate our data. However, memory is usually the limiting resource, and if we can't fit everything into memory?
+
+<br/>
+
+Create *blocks* - group rows based on similar attributes and read in multiple rows at a time. Optimal size will depend on the task and the properties of the disk.
+
+
+
+## Linear vs Binary Search
+
+Even with blocks, any kind of subsetting of rows requires a linear search, which requires $\mathcal{O}(N)$ accesses where $N$ is the number of blocks.
+
+<br/>
+
+We can do much better if we properly structure our data, specifically sorting some or all of the columns. 
+
+* Sorting is expensive, $\mathcal{O}(N \log N)$, but it only needs to be done once. 
+
+* After sorting, we can use a binary search for any subsetting tasks which is much faster, $\mathcal{O}(\log N)$.
+
+* These sorted columns are known as *indexes*.
+
+* Indexes require additional storage, but usually small enough to be kept in memory while blocks stay on disk.
+
+
+## Binary Search Example {.smaller}
+
+| Age  | Name         |
+|------|--------------|
+| 19   | Carol        |
+| 20   | Greg         |
+| 21   | Alice        |
+| 21   | Dave         |
+| 22   | Eve          |
+| 23   | Bob          |
+| 23   | Frank        |
+
+<br/><br/>
+
+Lets search for records for people who are 22 or older.
+
+
+## and then?
+
+This is just barely scratching the surface,
+
+* Efficiency gains are not just for disk, access is access
+
+* In general, trade off between storage and efficiency
+
+* Reality is a lot more complicated for everything mentioned so far, lots of very smart people have spent a lot of time thinking about and implementing tools
+
+* Different tasks with different requirements require different implementations and have different criteria for optimization
+
+
+
+## SQL
+
+Structures Query Language is a special purpose language for interacting with (querying and modifying) these indexed tabular data structures. 
+
+* ANSI Standard but with some dialect divergence
+
+* This functionality maps very closely (but not exactly) with the data manipulation verbs present in dplyr.
+
+* We will see this mapping in more detail in a bit.
+
+
+# Back to dplyr
+
+## data and cleanup
+
+```{r eval=FALSE}
+library(dplyr)
+library(data.table)
+library(lubridate)
+library(stringr)
+
+nyc = fread("~cr173/Sta523/data/nyc/nyc_311.csv") %>% 
+        as.data.frame() %>%
+        tbl_df()
+
+## Read 10018809 rows and 48 (of 48) columns from 5.913 GB file in 00:02:36
+```
+
+## 
+
+```{r eval=FALSE}
+nyc = nyc %>%
+      select(-Unique.Key,
+             -Resolution.Description,
+             -(Park.Facility.Name:Ferry.Terminal.Name)) %>%
+      mutate(Created.Date = mdy_hms(Created.Date),
+             Closed.Date  = mdy_hms(Closed.Date),
+             Due.Date     = mdy_hms(Due.Date),
+             Resolution.Action.Updated.Date = mdy_hms(Resolution.Action.Updated.Date),
+             Incident.Zip = as.integer(Incident.Zip),
+             Facility.Type = ifelse(Facility.Type == "N/A", NA, Facility.Type))
+```
+
+## {.smaller}
+
+```{r eval=FALSE}
+## Source: local data frame [10,018,809 x 23]
+## 
+##           Created.Date         Closed.Date Agency                             Agency.Name
+##                 (time)              (time)  (chr)                                   (chr)
+## 1  2015-10-06 02:13:38 2015-10-06 07:12:35    DOF                   Department of Finance
+## 2  2015-10-06 02:11:28 2015-10-06 03:17:00   NYPD         New York City Police Department
+## 3  2015-10-06 02:08:09                <NA>  DOHMH Department of Health and Mental Hygiene
+## 4  2015-10-06 02:03:54                <NA>  DOHMH Department of Health and Mental Hygiene
+## 5  2015-10-06 01:58:53 2015-10-06 03:54:33   NYPD         New York City Police Department
+## 6  2015-10-06 01:58:42 2015-10-06 02:42:21   NYPD         New York City Police Department
+## 7  2015-10-06 01:55:18 2015-10-06 11:06:48   NYPD         New York City Police Department
+## 8  2015-10-06 01:52:18 2015-10-06 02:59:04   NYPD         New York City Police Department
+## 9  2015-10-06 01:49:04 2015-10-06 03:03:21   NYPD         New York City Police Department
+## 10 2015-10-06 01:47:27 2015-10-06 03:07:37   NYPD         New York City Police Department
+## ..                 ...                 ...    ...                                     ...
+## Variables not shown: Complaint.Type (chr), Descriptor (chr), Location.Type (chr), Incident.Zip (int),
+##   Incident.Address (chr), Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr),
+##   Intersection.Street.1 (chr), Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark
+##   (chr), Facility.Type (chr), Status (chr), Due.Date (time), Resolution.Action.Updated.Date (time),
+##   Community.Board (chr), Borough (chr)
+```
+
+
+## Creating an sqlite database {.smaller}
+
+```{r eval=FALSE}
+(db = src_sqlite("~cr173/Sta523/data/nyc/nyc_311.sqlite", create = TRUE))
+
+## src:  sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311.sqlite]
+## tbls:
+
+nyc_sql = copy_to(db, nyc, temporary = FALSE)
+db
+
+## src:  sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311.sqlite]
+## tbls: nyc, sqlite_stat1
+
+nyc_sql = tbl(db,"nyc")
+str(nyc_sql)
+
+## List of 9
+##  $ src      :List of 3
+##   ..$ con :Formal class 'SQLiteConnection' [package "RSQLite"] with 5 slots
+##   .. .. ..@ Id                 :<externalptr> 
+##   .. .. ..@ dbname             : chr "/home/vis/cr173/Sta523/data/nyc/nyc_311.sqlite"
+##   .. .. ..@ loadable.extensions: logi TRUE
+##   .. .. ..@ flags              : int 6
+##   .. .. ..@ vfs                : chr ""
+##   ..$ path: chr "~cr173/Sta523/data/nyc/nyc_311.sqlite"
+##   ..$ info:List of 2
+##   .. ..$ serverVersion: chr "3.8.6"
+##   .. ..$ results      : logi FALSE
+##   ..- attr(*, "class")= chr [1:3] "src_sqlite" "src_sql" "src"
+## ...
+```
+
+## {.smaller}
+
+```{r eval=FALSE}
+nyc_sql
+
+## Source: sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311.sqlite]
+## From: nyc [10,018,809 x 23]
+## 
+##    Created.Date Closed.Date Agency                             Agency.Name          Complaint.Type
+##           (dbl)       (dbl)  (chr)                                   (chr)                   (chr)
+## 1    1444097618  1444115555    DOF                   Department of Finance  DOF Literature Request
+## 2    1444097488  1444101420   NYPD         New York City Police Department         Noise - Vehicle
+## 3    1444097289          NA  DOHMH Department of Health and Mental Hygiene                  Rodent
+## 4    1444097034          NA  DOHMH Department of Health and Mental Hygiene                  Rodent
+## 5    1444096733  1444103673   NYPD         New York City Police Department         Noise - Vehicle
+## 6    1444096722  1444099341   NYPD         New York City Police Department      Noise - Commercial
+## 7    1444096518  1444129608   NYPD         New York City Police Department Noise - Street/Sidewalk
+## 8    1444096338  1444100344   NYPD         New York City Police Department      Noise - Commercial
+## 9    1444096144  1444100601   NYPD         New York City Police Department        Blocked Driveway
+## 10   1444096047  1444100857   NYPD         New York City Police Department      Noise - Commercial
+## ..          ...         ...    ...                                     ...                     ...
+## Variables not shown: Descriptor (chr), Location.Type (chr), Incident.Zip (int), Incident.Address (chr),
+##   Street.Name (chr), Cross.Street.1 (chr), Cross.Street.2 (chr), Intersection.Street.1 (chr),
+##   Intersection.Street.2 (chr), Address.Type (chr), City (chr), Landmark (chr), Facility.Type (chr),
+##   Status (chr), Due.Date (dbl), Resolution.Action.Updated.Date (dbl), Community.Board (chr), Borough
+##   (chr)
+```
+
+
+## Using dplyr with sqlite {.smaller}
+
+```{r, eval=FALSE}
+(addr = nyc_sql %>%
+        select(Created.Date,Complaint.Type, contains("Incident")) %>%
+        filter(Incident.Address != "")
+)
+
+## Source: sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311.sqlite]
+## From: nyc [7,853,591 x 4]
+## Filter: Incident.Address != "" 
+## 
+##    Created.Date     Complaint.Type Incident.Zip          Incident.Address
+##           (dbl)              (chr)        (int)                     (chr)
+## 1    1444097488    Noise - Vehicle        10033        206 AUDOBON AVENUE
+## 2    1444097034             Rodent        10010      230 EAST 21ST STREET
+## 3    1444096733    Noise - Vehicle        10461           20 MARVIN PLACE
+## 4    1444096722 Noise - Commercial        10034                 10 AVENUE
+## 5    1444096338 Noise - Commercial        10012      116 MACDOUGAL STREET
+## 6    1444096144   Blocked Driveway        11213         330 ALBANY AVENUE
+## 7    1444096047 Noise - Commercial        10031             3650 BROADWAY
+## 8    1444095760 Food Establishment        11379 73-24 METROPOLITAN AVENUE
+## 9    1444095689   Blocked Driveway        11421           91-03 98 STREET
+## 10   1444095611 Food Establishment        11379  7324 METROPOLITAN AVENUE
+## ..          ...                ...          ...                       ...
+```
+
+## SQL Query
+
+```{r, eval=FALSE}
+addr$query
+
+## <Query> SELECT "Created.Date" AS "Created.Date", "Complaint.Type" AS "Complaint.Type", "Incident.Zip" AS "Incident.Zip", "Incident.Address" AS "Incident.Address"
+## FROM "nyc"
+## WHERE "Incident.Address" != ''
+## <SQLiteConnection>
+```
+
+## Limitations
+
+```{r, eval=FALSE}
+(rats = filter(addr, Complaint.Type == "Rodent") %>%
+        group_by(Incident.Zip) %>%
+        mutate(Incident.Zip = ifelse(Incident.Zip < 10000, NA, Incident.Zip)) %>%
+        summarize(n=n())
+)
+
+## Source: sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311.sqlite]
+## From: <derived table> [?? x 2]
+## 
+## Error in sqliteSendQuery(conn, statement) : 
+##   error in statement: no such function: IFELSE
+```
+
+## SQL Query {.smaller}
+
+```{r, eval=FALSE}
+rats$query
+
+## <Query> SELECT "Incident.Zip", "n"
+## FROM (SELECT "Incident.Zip", COUNT() AS "n"
+## FROM (SELECT "Created.Date" AS "Created.Date", "Complaint.Type" AS "Complaint.Type", "Incident.Zip" AS "Incident.Zip", "Incident.Address" AS "Incident.Address", IFELSE("Incident.Zip" < 10000.0, NULL, "Incident.Zip") AS "Incident.Zip"
+## FROM "nyc"
+## WHERE "Incident.Address" != '' AND "Complaint.Type" = 'Rodent') AS "zzz4"
+## GROUP BY "Incident.Zip") AS "zzz5"
+## <SQLiteConnection>
+```
+
+## SQL Translation {.smaller}
+
+dplyr has a function, `translate_sql`, that lets you experiment with how R functions are translated to SQL
+
+<div class="columns-2">
+```{r, error=TRUE}
+translate_sql(x == 1 & (y < 2 | z > 3))
+translate_sql(x ^ 2 < 10)
+translate_sql(x %% 2 == 10)
+translate_sql(paste(x,y))
+translate_sql(mean(x))
+translate_sql(mean(x, na.rm=TRUE))
+```
+</div>
+
+<br/>
+
+In general, dplyr knows how to translate basic math, logical, and summary functions from R to SQL.
+
+
+## (Unfair) Timings {.smaller}
+
+```{r, eval=FALSE}
+system.time(
+    select(nyc, Created.Date,Complaint.Type, contains("Incident")) %>%
+    filter(Incident.Address != "") %>%
+    group_by(Incident.Zip) %>%
+    summarize(n=n())
+)
+
+##    user  system elapsed 
+##   1.549   0.001   1.548 
+
+system.time(
+    select(nyc_sql, Created.Date,Complaint.Type, contains("Incident")) %>%
+    filter(Incident.Address != "") %>%
+    group_by(Incident.Zip) %>%
+    summarize(n=n())
+)
+
+##    user  system elapsed 
+##   0.053   0.001   0.054 
+```
+
+`nyc_sqlite` was 30x times faster than `nyc`, but the former is disk based while the latter is in memory, why this discrepancy?
+
+
+## Laziness
+
+`dplyr` uses lazy evaluation as much as possible, particularly when working with SQL backends.
+
+* When building a query, we don't want the entire table, often we want just enough to check if our query is working.
+
+* Since we would prefer to run one complex query over many simple queries, laziness allows for verbs to be strung together.
+
+* Therefore, by default `dplyr`
+    
+    * won't connect and query the database until absolutely necessary (e.g. show output),
+
+    * and unless explicitly told to, only query a handful of rows
+
+## {.smaller}
+
+
+```{r eval=FALSE}
+(zip = select(nyc_sql, Created.Date,Complaint.Type, contains("Incident")) %>%
+       filter(Incident.Address != "") %>%
+       group_by(Incident.Zip) %>%
+       summarize(n=n()) )
+
+## Source: sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311.sqlite]
+## From: <derived table> [?? x 2]
+## 
+##    Incident.Zip      n
+##           (int)  (int)
+## 1            NA 191036
+## 2             0    405
+## 3             1      1
+## 4            11      1
+## 5            24      1
+## 6            31      1
+## 7            46      1
+## 8            83    261
+## 9           116      1
+## 10          117      1
+## ..          ...    ...
+```
+
+## Full query {.smaller}
+
+To force a full query and return a complete `tbl_df` object `dplyr` uses the `collect` function.
+
+```{r, eval=FALSE}
+collect(zip)
+
+## Source: local data frame [1,584 x 2]
+## 
+##    Incident.Zip      n
+##           (int)  (int)
+## 1            NA 191036
+## 2             0    405
+## 3             1      1
+## 4            11      1
+## 5            24      1
+## 6            31      1
+## 7            46      1
+## 8            83    261
+## 9           116      1
+## 10          117      1
+## ..          ...    ...
+```
+
+`compute` and `collapse` also force a full query but have slightly different behavior and return types. 
+
+
+## Creating Indexes {.smaller}
+
+
+```{r, eval=FALSE}
+(db_index = src_sqlite("~cr173/Sta523/data/nyc/nyc_311_index.sqlite", create = TRUE))
+
+## src:  sqlite 3.8.6 [~cr173/Sta523/data/nyc/nyc_311_index.sqlite]
+## tbls:
+
+nyc_index = copy_to(db_index, nyc, temporary = FALSE,
+                    index = list("Agency", "Incident.Zip"))
+```
+
+
+
+##
+
+The indexed database takes up more disk space:
+
+```shell
+cr173@saxon [~]$ ls -lh ~cr173/Sta523/data/nyc/*.sqlite
+total 740M
+-rw-r--r--+ 1 cr173 visitor 2.6G Oct 21 01:14 /home/vis/cr173/Sta523/data/nyc/nyc_311_index.sqlite
+-rw-r--r--+ 1 cr173 visitor 2.4G Oct 21 01:20 /home/vis/cr173/Sta523/data/nyc/nyc_311.sqlite
+```
+
+## Timings for filtering bad dates
+
+```{r, eval=FALSE}
+system.time(nyc_sql %>% filter( Agency == "NYPD" ) %>% collect())
+
+##   user  system elapsed 
+##  9.272   2.959  12.222 
+
+system.time(nyc_index %>% filter( Agency == "NYPD") ) %>% collect())
+
+##   user  system elapsed 
+##  7.854   1.408   9.253 
+```
+
+## Timings for grouping
+
+```{r, eval=FALSE}
+system.time(nyc_sql %>% group_by(Incident.Zip) %>% 
+            summarize(count = n()) %>%  
+            collect())
+
+##    user  system elapsed
+##  19.751   3.691  23.423
+
+system.time(nyc_index %>% group_by(Incident.Zip) %>% 
+            summarize(count = n()) %>%  
+            collect())
+
+##    user  system elapsed 
+##   1.644   0.171   1.814
+```
+
+
+# Acknowledgments
+
+## Acknowledgments
+
+Above materials are derived in part from the following sources:
+
+* [dplyr - Introduction Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/introduction.html)
+* [dplyr - Databases Vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/databases.html)

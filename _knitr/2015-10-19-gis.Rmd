@@ -1,0 +1,289 @@
+---
+layout: page
+title: GIS in R
+reading: "<a href='https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf'>Data Wrangling Cheat Sheet</a>"
+notes: "Screencasts - <a href='https://www.youtube.com/watch?v=flZQ8fSSPv0'>intersections</a>, <a href='https://youtu.be/430i2APGoIQ'>pluto</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+slides: true
+---
+
+```{r echo=FALSE, include=FALSE}
+library(rgeos)
+library(rgdal)
+```
+
+# GIS Functionality
+
+## Example data {.smaller}
+
+```{r}
+nc  = readOGR("data/gis/nc_counties/","nc_counties",FALSE)
+air = readOGR("data/gis/airports/","airports",FALSE)
+hwy = readOGR("data/gis/us_interstates/","us_interstates",FALSE)
+```
+
+```{r}
+proj4string(nc)
+proj4string(air)
+proj4string(hwy)
+```
+
+
+## {.smaller}
+```{r echo=FALSE, fig.align="center", fig.height=5, fig.width=10}
+par(mar=c(3,3,0.1,0.1), mfrow=c(1,3))
+plot(nc,  axes=TRUE)
+plot(air, axes=TRUE, pch=1, col="blue")
+plot(hwy, axes=TRUE, col="red")
+```
+
+
+## {.smaller}
+```{r echo=FALSE}
+par(mar=c(0,0,0,0))
+```
+
+```{r}
+nc = spTransform(nc, CRS(proj4string(hwy)))
+row.names(nc) = sub(" County","", as.character(nc$COUNTY))
+air = spTransform(air, CRS(proj4string(hwy)))
+```
+
+```{r fig.align="center"}
+plot(nc)
+plot(air, add=TRUE, pch=1, col="blue")
+plot(hwy, add=TRUE, col="red")
+```
+
+## Distance to the closest airport from each county? {.smaller} 
+
+```{r}
+d = gDistance(nc,air,byid=c(TRUE,FALSE)) 
+str(d)
+```
+<div class="columns-2">
+```{r}
+d[,"Durham"]
+d[,"Wake"]
+d[,"Orange"]
+```
+
+<br/><br/><br/>
+</div>
+
+## Distance to County centroid? {.smaller}
+
+```{r}
+ncc = gCentroid(nc,byid=TRUE)
+class(ncc)
+d = gDistance(ncc,air,byid=c(TRUE,FALSE)) 
+```
+
+<div class="columns-2">
+```{r}
+d[,"Durham"]
+d[,"Wake"]
+d[,"Orange"]
+```
+
+<br/><br/><br/>
+</div>
+
+## Spatial predicates in `rgeos` {.smaller}
+
+<img src="imgs/predicates.png" width="500" style="display: block; margin: auto;"/>
+
+<br/>
+
+<div class="centered">
+For more detail see the DE-9IM specification
+</div>
+
+## Which counties have airports? {.smaller}
+
+```{r}
+nc_air = gIntersects(nc,air,byid=c(TRUE)) 
+str(nc_air)
+nc$COUNTY[apply(nc_air,2,any)]
+```
+
+##
+
+```{r fig.align="center"}
+plot(nc)
+plot(nc[apply(nc_air,2,any),], add=TRUE, col="lightblue")
+plot(air[apply(nc_air,1,any),], add=TRUE, pch=1, col="blue")
+```
+
+## Adjacency matrix of counties {.smaller}
+
+```{r}
+adj = gTouches(nc,byid=TRUE)
+str(adj)
+nc$COUNTY[adj["Durham",]]
+```
+
+## {.smaller}
+
+```{r fig.align="center"}
+library(corrplot)
+corrplot(adj[1:20,1:20],method="color",type="lower",tl.col="black",cl.pos = "n")
+```
+
+## Which counties have the most neighbors?
+
+```{r fig.align="center"}
+plot(nc)
+plot(nc[rowSums(adj)==max(rowSums(adj)),],add=TRUE,col="lightblue")
+```
+
+## Which counties have the least neighbors?
+
+```{r fig.align="center"}
+plot(nc)
+plot(nc[rowSums(adj)==min(rowSums(adj)),],add=TRUE,col="lightblue")
+```
+
+# A little more dplyr
+
+```{r echo=FALSE, include=FALSE}
+library(dplyr)
+```
+
+## A Grammar of Data Joins
+
+Two table functions / verbs for joining:
+
+* `full_join` - Join data. Retain all values, all rows.
+* `inner_join` - Join data. Retain only rows in both sets.
+* `left_join` - Join matching rows from `b` to `a`.
+* `right_join` - Join matching rows from `a` to `b`.
+* `semi_join` - All rows in `a` that have a match in `b`.
+* `anti_join` - All rows in `a` that do not have a match in `b`.
+
+##
+
+<div class="centered">
+<img src="imgs/join_venn.png" width="800px">
+</div>
+
+## Joining Data {.smaller}
+
+<div class="columns-2">
+```{r}
+addr = data.frame(name = c("Alice","Bob",
+                           "Carol","dave",
+                           "Eve"),
+                  email= c("alice@company.com",
+                           "bob@company.com",
+                           "carol@company.com",
+                           "dave@company.com",
+                           "eve@company.com"),
+                  stringsAsFactors = FALSE)
+```
+
+```{r}
+phone = data.frame(name = c("Bob","Carol",
+                            "Eve","Eve",
+                            "Frank"),
+                   phone= c("919 555-1111",
+                            "919 555-2222",
+                            "919 555-3333",
+                            "310 555-3333",
+                            "919 555-4444"),
+                   stringsAsFactors = FALSE)
+```
+</div>
+
+<div class="columns-2">
+```{r}
+addr
+```
+
+```{r}
+phone
+```
+</div>
+
+## Full (Outer) Join {.smaller}
+
+<div class="columns-2">
+dplyr:
+```{r}
+full_join(addr, phone)
+```
+
+Base R:
+```{r}
+merge(addr, phone, all=TRUE)
+```
+<br/>
+</div>
+
+## Inner Join {.smaller}
+
+<div class="columns-2">
+dplyr:
+```{r}
+inner_join(addr, phone)
+```
+
+Base R:
+```{r}
+merge(addr, phone, all=FALSE)
+```
+<br/>
+</div>
+
+## Left Join {.smaller}
+
+<div class="columns-2">
+dplyr:
+```{r}
+left_join(addr, phone)
+```
+
+Base R:
+```{r}
+merge(addr, phone, all.x=TRUE)
+```
+<br/>
+</div>
+
+## Right Join {.smaller}
+
+<div class="columns-2">
+dplyr:
+```{r}
+right_join(addr, phone)
+```
+
+Base R:
+```{r}
+merge(addr, phone, all.y=TRUE)
+```
+<br/>
+</div>
+
+## Semi and Anti Joins {.smaller}
+
+<div class="columns-2">
+```{r}
+semi_join(addr, phone)
+anti_join(addr, phone)
+```
+</div>
+
+## Additional Grammar for Combining Data Frames
+
+Two table functions / verbs:
+
+* `intersect` - Rows that appear in both `a` and `b`.
+* `union` - Rows that appear in either or both `a` and `b`
+* `setdiff` - Rows that appear in `a` but not `b`.
+* `bind_rows` - Like rbind, but better.
+* `bind_cols` - Like cbind, but better.
+
+Set operations are similar to the joins but require *all* columns be the same for both data frames.

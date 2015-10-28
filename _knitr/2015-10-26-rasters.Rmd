@@ -1,0 +1,12 @@
+---
+layout: page
+title: Rasters and Boundaries
+reading: "<a href='https://cran.r-project.org/web/packages/raster/vignettes/Raster.pdf'>raster vignette</a>"
+notes: "Screencast - <a href='https://www.youtube.com/watch?v=VTo9oSs6bO8'>rasters and boundaries</a>"
+output: 
+    ioslides_presentation:
+        widescreen: true
+        smaller: false
+slides: false
+link: false
+---
