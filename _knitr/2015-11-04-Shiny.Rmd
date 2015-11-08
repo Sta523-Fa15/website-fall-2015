@@ -1,0 +1,8 @@
+---
+layout: page
+title: Shiny
+reading: "<a href='http://shiny.rstudio.com/'>Shiny Documentation</a>"
+notes: "Screencast - <a href='https://youtu.be/aqiraOtJrzM'>Jelly Bean app</a>"
+slides: false
+link: false
+---

@@ -1,0 +1,8 @@
+---
+layout: page
+title: Approximate Bayesian Computation
+reading: ""
+notes: "<a href='hw/hw4.html'>Homework 4</a> - due Sat 11/14 by 2 pm "
+slides: false
+link: false
+---
