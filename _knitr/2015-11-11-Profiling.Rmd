@@ -1,0 +1,8 @@
+---
+layout: page
+title: Profiling
+reading: "<a href='http://adv-r.had.co.nz/Profiling.html'>Adv. R</a>, <a href='http://rpubs.com/wch/123888'>Profvis</a>"
+notes: "Screencast - <a href='https://youtu.be/J0rvqvaC6q4'>Profiling</a>"
+slides: false
+link: false
+---

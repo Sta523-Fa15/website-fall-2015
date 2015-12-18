@@ -1,0 +1,9 @@
+---
+layout: page
+title: Rhipe & Hadoop 
+reading: "<a href='http://tessera.io/docs-RHIPE/'>Rhipe tutorial</a>"
+notes: "<a href='hw/hw5.html'>Homework 5</a> - due <strike>Sat 12/05</strike> Mon 12/07 by 2 pm <br/> Screencast - <a href='https://www.youtube.com/watch?v=uF5jvzCrQpQ'>Rhipe</a>" 
+slides: false
+link: false
+---
+

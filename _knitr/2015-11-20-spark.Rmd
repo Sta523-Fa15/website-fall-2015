@@ -1,0 +1,9 @@
+---
+layout: page
+title: Spark 
+reading: "<a href='http://spark.apache.org/docs/latest/sparkr.html'>SparkR</a>"
+notes: "Screencast - <a href='https://www.youtube.com/watch?v=soYUXesKHPw'>SparkR</a>" 
+slides: false
+link: false
+---
+

@@ -1,0 +1,9 @@
+---
+layout: page
+title: MapReduce 
+reading: ""
+notes: "<a href='https://github.com/Sta523-Fa15/TeamExample_hw5'>MapReduce example</a>"
+slides: false
+link: false
+---
+
