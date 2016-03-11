@@ -25,7 +25,7 @@ title: Course Information
     * Tuesdays, 1:00 - 3:00 pm
     * or by appointment
 * Teaching Assistants
-    * [Michael Lindon](mailto:msl33@stat.duke.edu) - Fridays, 12:00 - 1:00 pm and 2:30 - 3:30 pm, 211A Old Chemistry
+    * [Michael Lindon](mailto:msl33@stat.duke.edu) - Mondays 10:30 - 11:30 am and Fridays 2:30 - 3:30 pm, 211A Old Chemistry
     * [Derek Owens-Oas](mailto:derek.owens.oas@duke.edu) - Mondays and Wednesdays, 6:00 - 7:00 pm, 025 Old Chemistry
 
 
